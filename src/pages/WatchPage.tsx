@@ -445,55 +445,59 @@ export function WatchPage() {
           </div>
         </div>
 
-        <aside className="watch-sidebar" aria-label="Episode selector">
-          <div className="section-header" style={{ marginBottom: '12px' }}>
-            <h2 className="section-title" style={{ fontSize: '1rem' }}>
-              Episodes
-            </h2>
-            {catalogue.airedEpisodeCount > 0 && (
-              <span className="section-subtitle tabular">
-                {catalogue.airedEpisodeCount} listed
-              </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <aside className="watch-sidebar" aria-label="Episode selector">
+            <div className="section-header" style={{ marginBottom: '12px' }}>
+              <h2 className="section-title" style={{ fontSize: '1rem' }}>
+                Episodes
+              </h2>
+              {catalogue.airedEpisodeCount > 0 && (
+                <span className="section-subtitle tabular">
+                  {catalogue.airedEpisodeCount} listed
+                </span>
+              )}
+            </div>
+
+            {!catalogue.hasExactEpisodeCount && (
+              <form
+                style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const parsed = Number.parseInt(manualEpInput, 10);
+                  if (Number.isInteger(parsed) && parsed >= 1) {
+                    setNavigationState(parsed, currentAudio);
+                    setManualEpInput('');
+                  }
+                }}
+              >
+                <input
+                  type="number"
+                  min={1}
+                  className="field-input"
+                  style={{ height: '32px', fontSize: '0.8125rem' }}
+                  placeholder="Jump to episode #..."
+                  aria-label="Jump to episode number"
+                  value={manualEpInput}
+                  onChange={(e) => setManualEpInput(e.target.value)}
+                />
+                <button type="submit" className="btn btn--secondary btn--compact">
+                  Go
+                </button>
+              </form>
             )}
-          </div>
 
-          {!catalogue.hasExactEpisodeCount && (
-            <form
-              style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}
-              onSubmit={(e) => {
-                e.preventDefault();
-                const parsed = Number.parseInt(manualEpInput, 10);
-                if (Number.isInteger(parsed) && parsed >= 1) {
-                  setNavigationState(parsed, currentAudio);
-                  setManualEpInput('');
-                }
-              }}
-            >
-              <input
-                type="number"
-                min={1}
-                className="field-input"
-                style={{ height: '32px', fontSize: '0.8125rem' }}
-                placeholder="Jump to episode #..."
-                aria-label="Jump to episode number"
-                value={manualEpInput}
-                onChange={(e) => setManualEpInput(e.target.value)}
-              />
-              <button type="submit" className="btn btn--secondary btn--compact">
-                Go
-              </button>
-            </form>
-          )}
+            <EpisodeList
+              animeId={anime.id}
+              catalogue={catalogue}
+              currentEpisode={currentEpisode}
+              audio={currentAudio}
+              compact
+              onSelectEpisode={(epNum) => setNavigationState(epNum, currentAudio)}
+            />
+          </aside>
 
-          <EpisodeList
-            animeId={anime.id}
-            catalogue={catalogue}
-            currentEpisode={currentEpisode}
-            audio={currentAudio}
-            compact
-            onSelectEpisode={(epNum) => setNavigationState(epNum, currentAudio)}
-          />
-        </aside>
+          <AdSlot placement="watch-sidebar-rectangle" />
+        </div>
       </div>
     </div>
   );

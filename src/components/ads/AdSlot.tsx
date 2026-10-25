@@ -4,6 +4,7 @@ import {
   getAdNetworkAdapter,
   getAdSystemSettings,
 } from '../../services/ads/adRegistry';
+import { PERCH_ADS_SLOTS } from '../../services/ads/perchAdsConfig';
 import type { AdDimensions, AdPlacement } from '../../types/ads';
 
 export interface AdSlotProps {
@@ -26,6 +27,7 @@ export function AdSlot({
     enabled ?? (settings.enabled && (settings.placements[placement] ?? true));
   const shouldReserve = reserveSpace ?? settings.reserveSpace;
 
+  const perchMeta = PERCH_ADS_SLOTS[placement];
   const baseDims = DEFAULT_AD_DIMENSIONS[placement];
   const resolvedDims: AdDimensions = {
     desktopWidth: dimensions?.desktopWidth ?? baseDims.desktopWidth,
@@ -45,7 +47,11 @@ export function AdSlot({
 
     const adapter = getAdNetworkAdapter();
     const container = surfaceRef.current;
-    if (!container || !adapter.isConfigured) {
+    const slotReady = adapter.isPlacementConfigured
+      ? adapter.isPlacementConfigured(placement)
+      : adapter.isConfigured;
+
+    if (!container || !slotReady) {
       setRenderedExternal(false);
       return;
     }
@@ -64,7 +70,6 @@ export function AdSlot({
         }
       })
       .catch(() => {
-        // Gracefully degrade if ad script fails or is blocked by client software
         if (!controller.signal.aborted) {
           setRenderedExternal(false);
         }
@@ -98,25 +103,44 @@ export function AdSlot({
     '--ad-mobile-h': `${resolvedDims.mobileHeight}px`,
   } as CSSProperties;
 
+  const sameMobileDesktopSize =
+    resolvedDims.desktopWidth === resolvedDims.mobileWidth &&
+    resolvedDims.desktopHeight === resolvedDims.mobileHeight;
+
   return (
     <aside
       className={`ad-slot-wrapper${className ? ` ${className}` : ''}`}
       aria-label="Advertisement"
       data-ad-placement={placement}
+      data-ad-network="perchads"
     >
       <div
         className={`ad-slot${shouldReserve ? '' : ' ad-slot--unreserved'}`}
         style={styleVars}
       >
         <div className="ad-slot__header">
-          <span className="ad-slot__label">Advertisement</span>
-          <span className="ad-slot__spec">
-            {resolvedDims.desktopWidth}×{resolvedDims.desktopHeight}
-          </span>
+          <span className="ad-slot__label">Advertisement · Perch Ads</span>
+          {sameMobileDesktopSize ? (
+            <span className="ad-slot__spec">
+              {resolvedDims.desktopWidth}×{resolvedDims.desktopHeight}
+            </span>
+          ) : (
+            <>
+              <span className="ad-slot__spec ad-slot__spec--desktop">
+                {resolvedDims.desktopWidth}×{resolvedDims.desktopHeight}
+              </span>
+              <span className="ad-slot__spec ad-slot__spec--mobile">
+                {resolvedDims.mobileWidth}×{resolvedDims.mobileHeight}
+              </span>
+            </>
+          )}
         </div>
+
         <div ref={surfaceRef} className="ad-slot__surface">
           {!renderedExternal && (
-            <span>Reserved sponsor space — ad provider inactive</span>
+            <span className="ad-slot__placeholder-copy">
+              Perch Ads placeholder — {perchMeta.label} ({perchMeta.perchFormat})
+            </span>
           )}
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, Play, Trash2, X } from 'lucide-react';
+import { AdSlot } from '../components/ads/AdSlot';
 import { EmptyState } from '../components/ui/StateFeedback';
 import { useWatchHistory } from '../services/storage/historyStore';
 import {
@@ -177,6 +178,10 @@ export function HistoryPage() {
           })}
         </div>
       )}
+
+      <div style={{ marginTop: '36px' }}>
+        <AdSlot placement="collection-footer-banner" />
+      </div>
     </div>
   );
 }

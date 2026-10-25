@@ -172,7 +172,7 @@ describe('Solfain Application Flows & Acceptance Criteria', () => {
     expect(screen.getByRole('heading', { name: 'Trending Now' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Recently Released' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'All-Time Popular' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Advertisement')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Advertisement')).toHaveLength(3);
 
     // Strictly verify absence of any beta banner text
     expect(screen.queryByText(/SOLFAIN IS IN BETA/i)).not.toBeInTheDocument();
@@ -324,7 +324,7 @@ describe('Solfain Application Flows & Acceptance Criteria', () => {
     await waitFor(() => {
       expect(screen.getByLabelText('Advertisement')).toBeInTheDocument();
     });
-    expect(screen.getByText(/Reserved sponsor space/i)).toBeInTheDocument();
+    expect(screen.getByText(/Perch Ads placeholder/i)).toBeInTheDocument();
 
     rerender(<AdSlot placement="home-leaderboard" enabled={false} />);
     expect(screen.queryByLabelText('Advertisement')).not.toBeInTheDocument();

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { AdSlot } from '../components/ads/AdSlot';
 import { AnimeCard } from '../components/anime/AnimeCard';
 import { AnimeGridSkeleton } from '../components/anime/Skeletons';
 import { EmptyState, ErrorState } from '../components/ui/StateFeedback';
@@ -368,6 +369,10 @@ export function SearchPage() {
         )}
       </div>
 
+      <div style={{ marginBottom: '22px' }}>
+        <AdSlot placement="search-top-banner" />
+      </div>
+
       {loading ? (
         <AnimeGridSkeleton count={18} />
       ) : errorMessage && results.length === 0 ? (
@@ -422,6 +427,10 @@ export function SearchPage() {
               </button>
             </div>
           )}
+
+          <div style={{ marginTop: '32px' }}>
+            <AdSlot placement="search-bottom-banner" />
+          </div>
         </>
       )}
     </div>

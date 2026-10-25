@@ -4,57 +4,34 @@ import type {
   AdPlacement,
   AdSystemSettings,
 } from '../../types/ads';
+import { createPerchAdsAdapter, PERCH_ADS_SLOTS } from './perchAdsConfig';
 
-export const DEFAULT_AD_DIMENSIONS: Record<AdPlacement, AdDimensions> = {
-  'home-leaderboard': {
-    desktopWidth: 728,
-    desktopHeight: 90,
-    mobileWidth: 320,
-    mobileHeight: 50,
-  },
-  'details-inline': {
-    desktopWidth: 728,
-    desktopHeight: 90,
-    mobileWidth: 320,
-    mobileHeight: 50,
-  },
-  'watch-below-player': {
-    desktopWidth: 728,
-    desktopHeight: 90,
-    mobileWidth: 320,
-    mobileHeight: 50,
-  },
-  'sidebar-rectangle': {
-    desktopWidth: 300,
-    desktopHeight: 250,
-    mobileWidth: 300,
-    mobileHeight: 250,
-  },
+export const DEFAULT_AD_DIMENSIONS: Record<AdPlacement, AdDimensions> = Object.fromEntries(
+  Object.entries(PERCH_ADS_SLOTS).map(([key, config]) => [key, config.dimensions]),
+) as Record<AdPlacement, AdDimensions>;
+
+const defaultPerchAdapter: AdNetworkAdapter = createPerchAdsAdapter(PERCH_ADS_SLOTS);
+
+let activeAdAdapter: AdNetworkAdapter = defaultPerchAdapter;
+
+const defaultPlacementsEnabled: Record<AdPlacement, boolean> = {
+  'home-leaderboard': true,
+  'home-mid-catalogue': true,
+  'home-footer-banner': true,
+  'search-top-banner': true,
+  'search-bottom-banner': true,
+  'details-inline': true,
+  'details-bottom-banner': true,
+  'sidebar-rectangle': true,
+  'watch-below-player': true,
+  'watch-sidebar-rectangle': true,
+  'collection-footer-banner': true,
 };
-
-const unconfiguredAdAdapter: AdNetworkAdapter = {
-  id: 'unconfigured',
-  name: 'No Ad Network Configured',
-  isConfigured: false,
-  async mountSlot() {
-    return {
-      rendered: false,
-      reason: 'No third-party ad network is currently configured.',
-    };
-  },
-};
-
-let activeAdAdapter: AdNetworkAdapter = unconfiguredAdAdapter;
 
 let adSettings: AdSystemSettings = {
   enabled: true,
   reserveSpace: true,
-  placements: {
-    'home-leaderboard': true,
-    'details-inline': true,
-    'watch-below-player': true,
-    'sidebar-rectangle': true,
-  },
+  placements: { ...defaultPlacementsEnabled },
 };
 
 export function getAdNetworkAdapter(): AdNetworkAdapter {
@@ -66,7 +43,7 @@ export function registerAdNetworkAdapter(adapter: AdNetworkAdapter): void {
 }
 
 export function resetAdNetworkAdapter(): void {
-  activeAdAdapter = unconfiguredAdAdapter;
+  activeAdAdapter = defaultPerchAdapter;
 }
 
 export function getAdSystemSettings(): AdSystemSettings {

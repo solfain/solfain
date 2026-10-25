@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bookmark } from 'lucide-react';
+import { AdSlot } from '../components/ads/AdSlot';
 import { AnimeCard } from '../components/anime/AnimeCard';
 import { EmptyState } from '../components/ui/StateFeedback';
 import { useFavorites } from '../services/storage/favoritesStore';
@@ -87,6 +88,10 @@ export function FavoritesPage() {
           ))}
         </div>
       )}
+
+      <div style={{ marginTop: '36px' }}>
+        <AdSlot placement="collection-footer-banner" />
+      </div>
     </div>
   );
 }

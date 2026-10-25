@@ -149,6 +149,8 @@ export function HomePage() {
           </CatalogueRow>
         )}
 
+        <AdSlot placement="home-mid-catalogue" />
+
         {recommended.length > 0 && seedTitle && (
           <CatalogueRow
             title="Recommended For You"
@@ -183,6 +185,8 @@ export function HomePage() {
             ))}
           </CatalogueRow>
         )}
+
+        <AdSlot placement="home-footer-banner" />
       </div>
     </div>
   );
