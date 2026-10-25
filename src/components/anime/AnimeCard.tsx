@@ -32,7 +32,7 @@ export function AnimeCard({ anime, rank, eager = false }: AnimeCardProps) {
   const title = isFavoriteRecord(anime) ? anime.title : getDisplayTitle(anime.title);
   const coverUrl = isFavoriteRecord(anime)
     ? anime.coverImage
-    : anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || null;
+    : anime.coverImage?.large || anime.coverImage?.extraLarge || anime.coverImage?.medium || null;
   const formatLabel = formatMediaFormat(anime.format);
   const year = isFavoriteRecord(anime) ? anime.seasonYear : getReleaseYear(anime);
   const scoreLabel = formatScore(anime.averageScore);

@@ -8,6 +8,27 @@
       name="description"
       content="Solfain — Discover anime series and films, explore seasonal lineups, and stream episodes."
     />
+    <!-- Early DNS/TLS preconnect & high-priority preload for Adsterra & AniList/Yenime -->
+    <link rel="preconnect" href="https://bauval.org" />
+    <link rel="preconnect" href="https://bauval.org" crossorigin />
+    <link rel="dns-prefetch" href="https://bauval.org" />
+    <link rel="preconnect" href="https://static.nresystems.com" crossorigin />
+    <link rel="dns-prefetch" href="https://static.nresystems.com" />
+    <link rel="preconnect" href="https://graphql.anilist.co" crossorigin />
+    <link rel="preconnect" href="https://s4.anilist.co" crossorigin />
+    <link rel="preconnect" href="https://player.yenime.net" />
+    <link
+      rel="preload"
+      href="https://bauval.org/22/8031ff5e7be9985553dcdea4bbb45d96"
+      as="script"
+      fetchpriority="high"
+    />
+    <link
+      rel="preload"
+      href="https://bauval.org/22/6339f8aa4607b6c12e213fc4cf317df1"
+      as="script"
+      fetchpriority="high"
+    />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Solfain — Anime Discovery & Streaming</title>
   </head>

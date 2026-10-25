@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { AdSlot } from '../components/monetization/SponsorSlot';
 import { EpisodeList } from '../components/anime/EpisodeList';
-import { WatchSkeleton } from '../components/anime/Skeletons';
 import { ErrorState } from '../components/ui/StateFeedback';
 import { getAnimeDetails } from '../services/anilist/anilistService';
 import { getVideoProvider } from '../services/providers';
@@ -169,11 +168,7 @@ export function WatchPage() {
     return () => window.removeEventListener('message', handleMessage);
   }, [anime, autoNext, currentAudio, currentEpisode, hasNext, provider, setNavigationState]);
 
-  if (loading) {
-    return <WatchSkeleton />;
-  }
-
-  if (errorMessage || !anime || !catalogue || !playbackSource) {
+  if (!loading && (errorMessage || !anime || !catalogue || !playbackSource)) {
     return (
       <div className="container watch-page">
         <ErrorState
@@ -190,313 +185,348 @@ export function WatchPage() {
     );
   }
 
-  const title = getDisplayTitle(anime.title);
-  const favorited = isFavorite(anime.id);
+  const isInitialLoading = loading || !anime || !catalogue || !playbackSource;
+
+  const title = anime ? getDisplayTitle(anime.title) : '';
+  const favorited = anime ? isFavorite(anime.id) : false;
   const hasPrev = currentEpisode > 1;
-  const studioName = getMainStudioName(anime);
-  const synopsis = cleanSynopsis(anime.description);
-  const iframeSrc = playbackSource.embedUrl;
+  const studioName = anime ? getMainStudioName(anime) : null;
+  const synopsis = anime ? cleanSynopsis(anime.description) : '';
+  const iframeSrc = playbackSource?.embedUrl ?? null;
 
   return (
-    <div className="container watch-page">
-      <div className="watch-breadcrumb">
-        <Link to={`/anime/${anime.id}`} className="watch-breadcrumb__back">
-          <ArrowLeft size={15} aria-hidden="true" />
-          <span>Back to {title}</span>
-        </Link>
+    <div className="container watch-page" aria-busy={isInitialLoading || undefined}>
+      {isInitialLoading ? (
+        <div
+          className="skeleton-block"
+          style={{ height: '18px', width: '220px', marginBottom: '14px' }}
+        />
+      ) : (
+        <div className="watch-breadcrumb">
+          <Link to={`/anime/${anime.id}`} className="watch-breadcrumb__back">
+            <ArrowLeft size={15} aria-hidden="true" />
+            <span>Back to {title}</span>
+          </Link>
 
-        <span className="tabular">
-          Episode {currentEpisode}
-          {catalogue.hasExactEpisodeCount && catalogue.airedEpisodeCount > 0
-            ? ` of ${catalogue.airedEpisodeCount}`
-            : ''}
-        </span>
-      </div>
+          <span className="tabular">
+            Episode {currentEpisode}
+            {catalogue.hasExactEpisodeCount && catalogue.airedEpisodeCount > 0
+              ? ` of ${catalogue.airedEpisodeCount}`
+              : ''}
+          </span>
+        </div>
+      )}
 
       <div className="watch-layout">
         <div className="watch-stage">
-          <div className="player-frame">
-            {playbackSource.ok && iframeSrc ? (
-              <>
-                {!iframeLoaded && (
-                  <div
-                    className="player-overlay player-overlay--loading"
-                    aria-live="polite"
-                  >
-                    <div className="player-overlay__title">Loading Episode {currentEpisode}…</div>
+          {isInitialLoading ? (
+            <>
+              <div className="player-frame skeleton-block" />
+              <div className="skeleton-block" style={{ height: '58px', width: '100%' }} />
+            </>
+          ) : (
+            <>
+              <div className="player-frame">
+                {playbackSource.ok && iframeSrc ? (
+                  <>
+                    {!iframeLoaded && (
+                      <div
+                        className="player-overlay player-overlay--loading"
+                        aria-live="polite"
+                      >
+                        <div className="player-overlay__title">
+                          Loading Episode {currentEpisode}…
+                        </div>
+                        <p className="player-overlay__desc">
+                          {title} · {currentAudio.toUpperCase()}
+                        </p>
+                      </div>
+                    )}
+                    <iframe
+                      key={`${iframeSrc}::${reloadNonce}`}
+                      src={iframeSrc}
+                      title={`${title} — Episode ${currentEpisode} (${currentAudio.toUpperCase()})`}
+                      className="player-frame__iframe"
+                      allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+                      allowFullScreen
+                      referrerPolicy="origin"
+                      onLoad={() => setIframeLoaded(true)}
+                    />
+                  </>
+                ) : (
+                  <div className="player-overlay" role="alert">
+                    <AlertTriangle size={24} color="var(--status-warning)" aria-hidden="true" />
+                    <div className="player-overlay__title">Episode Unavailable</div>
                     <p className="player-overlay__desc">
-                      {title} · {currentAudio.toUpperCase()}
+                      {playbackSource.errorMessage ||
+                        'Could not resolve a playable source for this episode.'}
                     </p>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                      {catalogue.airedEpisodeCount > 0 && currentEpisode !== 1 && (
+                        <button
+                          type="button"
+                          className="btn btn--secondary btn--compact"
+                          onClick={() => setNavigationState(1, currentAudio)}
+                        >
+                          Go to Episode 1
+                        </button>
+                      )}
+                      <Link
+                        to={`/anime/${anime.id}`}
+                        className="btn btn--ghost btn--compact"
+                      >
+                        Series Details
+                      </Link>
+                    </div>
                   </div>
                 )}
-                <iframe
-                  key={`${iframeSrc}::${reloadNonce}`}
-                  src={iframeSrc}
-                  title={`${title} — Episode ${currentEpisode} (${currentAudio.toUpperCase()})`}
-                  className="player-frame__iframe"
-                  allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-                  allowFullScreen
-                  referrerPolicy="origin"
-                  onLoad={() => setIframeLoaded(true)}
-                />
-              </>
-            ) : (
-              <div className="player-overlay" role="alert">
-                <AlertTriangle size={24} color="var(--status-warning)" aria-hidden="true" />
-                <div className="player-overlay__title">Episode Unavailable</div>
-                <p className="player-overlay__desc">
-                  {playbackSource.errorMessage ||
-                    'Could not resolve a playable source for this episode.'}
-                </p>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-                  {catalogue.airedEpisodeCount > 0 && currentEpisode !== 1 && (
+              </div>
+
+              <div className="watch-controls-bar" aria-label="Playback and episode controls">
+                <div className="watch-controls-group">
+                  <button
+                    type="button"
+                    className="btn btn--secondary btn--compact"
+                    aria-label="Previous episode"
+                    disabled={!hasPrev}
+                    onClick={() => setNavigationState(currentEpisode - 1, currentAudio)}
+                  >
+                    <ChevronLeft size={15} aria-hidden="true" />
+                    <span>Prev</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn--secondary btn--compact"
+                    aria-label="Next episode"
+                    disabled={!hasNext}
+                    onClick={() => setNavigationState(currentEpisode + 1, currentAudio)}
+                  >
+                    <span>Next</span>
+                    <ChevronRight size={15} aria-hidden="true" />
+                  </button>
+
+                  {catalogue.episodes.length > 1 && catalogue.episodes.length <= 200 && (
+                    <select
+                      className="field-select"
+                      aria-label="Select episode"
+                      style={{
+                        width: 'auto',
+                        minWidth: '112px',
+                        height: '34px',
+                        fontSize: '0.8125rem',
+                      }}
+                      value={currentEpisode}
+                      onChange={(e) =>
+                        setNavigationState(Number.parseInt(e.target.value, 10), currentAudio)
+                      }
+                    >
+                      {catalogue.episodes.map((ep) => (
+                        <option key={ep.number} value={ep.number}>
+                          Episode {ep.number}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                <div className="watch-controls-group">
+                  <div
+                    className="segmented-control"
+                    role="group"
+                    aria-label="Audio track selection"
+                  >
                     <button
                       type="button"
-                      className="btn btn--secondary btn--compact"
-                      onClick={() => setNavigationState(1, currentAudio)}
+                      className={`segmented-control__btn${
+                        currentAudio === 'sub' ? ' segmented-control__btn--active' : ''
+                      }`}
+                      aria-pressed={currentAudio === 'sub'}
+                      onClick={() => setNavigationState(currentEpisode, 'sub')}
                     >
-                      Go to Episode 1
+                      SUB
                     </button>
+                    <button
+                      type="button"
+                      className={`segmented-control__btn${
+                        currentAudio === 'dub' ? ' segmented-control__btn--active' : ''
+                      }`}
+                      aria-pressed={currentAudio === 'dub'}
+                      onClick={() => setNavigationState(currentEpisode, 'dub')}
+                    >
+                      DUB
+                    </button>
+                  </div>
+
+                  {playbackSource.canFallbackToMal && (
+                    <div
+                      className="segmented-control"
+                      role="group"
+                      aria-label="Source identifier"
+                    >
+                      <button
+                        type="button"
+                        className={`segmented-control__btn${
+                          idMode === 'anilist' ? ' segmented-control__btn--active' : ''
+                        }`}
+                        aria-pressed={idMode === 'anilist'}
+                        onClick={() => setIdMode('anilist')}
+                      >
+                        AniList
+                      </button>
+                      <button
+                        type="button"
+                        className={`segmented-control__btn${
+                          idMode === 'mal' ? ' segmented-control__btn--active' : ''
+                        }`}
+                        aria-pressed={idMode === 'mal'}
+                        onClick={() => setIdMode('mal')}
+                      >
+                        MAL
+                      </button>
+                    </div>
                   )}
-                  <Link
-                    to={`/anime/${anime.id}`}
+
+                  <button
+                    type="button"
+                    className={`btn btn--ghost btn--compact${
+                      autoNext ? ' btn--active-accent' : ''
+                    }`}
+                    aria-pressed={autoNext}
+                    onClick={() => setAutoNext((prev) => !prev)}
+                  >
+                    <span>Auto-Next</span>
+                  </button>
+
+                  <button
+                    type="button"
                     className="btn btn--ghost btn--compact"
+                    aria-label="Reload video player"
+                    onClick={() => setReloadNonce((n) => n + 1)}
                   >
-                    Series Details
-                  </Link>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="watch-controls-bar" aria-label="Playback and episode controls">
-            <div className="watch-controls-group">
-              <button
-                type="button"
-                className="btn btn--secondary btn--compact"
-                aria-label="Previous episode"
-                disabled={!hasPrev}
-                onClick={() => setNavigationState(currentEpisode - 1, currentAudio)}
-              >
-                <ChevronLeft size={15} aria-hidden="true" />
-                <span>Prev</span>
-              </button>
-
-              <button
-                type="button"
-                className="btn btn--secondary btn--compact"
-                aria-label="Next episode"
-                disabled={!hasNext}
-                onClick={() => setNavigationState(currentEpisode + 1, currentAudio)}
-              >
-                <span>Next</span>
-                <ChevronRight size={15} aria-hidden="true" />
-              </button>
-
-              {catalogue.episodes.length > 1 && catalogue.episodes.length <= 200 && (
-                <select
-                  className="field-select"
-                  aria-label="Select episode"
-                  style={{ width: 'auto', minWidth: '112px', height: '34px', fontSize: '0.8125rem' }}
-                  value={currentEpisode}
-                  onChange={(e) =>
-                    setNavigationState(Number.parseInt(e.target.value, 10), currentAudio)
-                  }
-                >
-                  {catalogue.episodes.map((ep) => (
-                    <option key={ep.number} value={ep.number}>
-                      Episode {ep.number}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-
-            <div className="watch-controls-group">
-              <div className="segmented-control" role="group" aria-label="Audio track selection">
-                <button
-                  type="button"
-                  className={`segmented-control__btn${
-                    currentAudio === 'sub' ? ' segmented-control__btn--active' : ''
-                  }`}
-                  aria-pressed={currentAudio === 'sub'}
-                  onClick={() => setNavigationState(currentEpisode, 'sub')}
-                >
-                  SUB
-                </button>
-                <button
-                  type="button"
-                  className={`segmented-control__btn${
-                    currentAudio === 'dub' ? ' segmented-control__btn--active' : ''
-                  }`}
-                  aria-pressed={currentAudio === 'dub'}
-                  onClick={() => setNavigationState(currentEpisode, 'dub')}
-                >
-                  DUB
-                </button>
-              </div>
-
-              {playbackSource.canFallbackToMal && (
-                <div
-                  className="segmented-control"
-                  role="group"
-                  aria-label="Source identifier"
-                >
-                  <button
-                    type="button"
-                    className={`segmented-control__btn${
-                      idMode === 'anilist' ? ' segmented-control__btn--active' : ''
-                    }`}
-                    aria-pressed={idMode === 'anilist'}
-                    onClick={() => setIdMode('anilist')}
-                  >
-                    AniList
-                  </button>
-                  <button
-                    type="button"
-                    className={`segmented-control__btn${
-                      idMode === 'mal' ? ' segmented-control__btn--active' : ''
-                    }`}
-                    aria-pressed={idMode === 'mal'}
-                    onClick={() => setIdMode('mal')}
-                  >
-                    MAL
+                    <RefreshCw size={14} aria-hidden="true" />
+                    <span>Reload</span>
                   </button>
                 </div>
-              )}
-
-              <button
-                type="button"
-                className={`btn btn--ghost btn--compact${autoNext ? ' btn--active-accent' : ''}`}
-                aria-pressed={autoNext}
-                onClick={() => setAutoNext((prev) => !prev)}
-              >
-                <span>Auto-Next</span>
-              </button>
-
-              <button
-                type="button"
-                className="btn btn--ghost btn--compact"
-                aria-label="Reload video player"
-                onClick={() => setReloadNonce((n) => n + 1)}
-              >
-                <RefreshCw size={14} aria-hidden="true" />
-                <span>Reload</span>
-              </button>
-            </div>
-          </div>
-
-          <section className="watch-info-panel" aria-label="Current episode details">
-            <div className="watch-info-panel__header">
-              <div>
-                <h1 className="watch-anime-title">{title}</h1>
-                <p className="watch-ep-label">
-                  Episode {currentEpisode}
-                  {activeEpisodeMeta?.title ? ` — ${activeEpisodeMeta.title}` : ''}
-                  {' · '}
-                  {[formatMediaFormat(anime.format), getReleaseYear(anime), studioName]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </p>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  className={`btn btn--ghost btn--compact${
-                    favorited ? ' btn--active-accent' : ''
-                  }`}
-                  aria-pressed={favorited}
-                  onClick={() => toggleFavorite(anime)}
-                >
-                  <Bookmark
-                    size={14}
-                    fill={favorited ? 'currentColor' : 'none'}
-                    aria-hidden="true"
-                  />
-                  <span>{favorited ? 'Saved' : 'Favorite'}</span>
-                </button>
-                <Link to={`/anime/${anime.id}`} className="btn btn--secondary btn--compact">
-                  Details
-                </Link>
-              </div>
-            </div>
+              <section className="watch-info-panel" aria-label="Current episode details">
+                <div className="watch-info-panel__header">
+                  <div>
+                    <h1 className="watch-anime-title">{title}</h1>
+                    <p className="watch-ep-label">
+                      Episode {currentEpisode}
+                      {activeEpisodeMeta?.title ? ` — ${activeEpisodeMeta.title}` : ''}
+                      {' · '}
+                      {[formatMediaFormat(anime.format), getReleaseYear(anime), studioName]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  </div>
 
-            {synopsis && (
-              <p
-                style={{
-                  fontSize: '0.84375rem',
-                  lineHeight: 1.55,
-                  color: 'var(--text-secondary)',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 3,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                }}
-              >
-                {synopsis}
-              </p>
-            )}
-          </section>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      className={`btn btn--ghost btn--compact${
+                        favorited ? ' btn--active-accent' : ''
+                      }`}
+                      aria-pressed={favorited}
+                      onClick={() => toggleFavorite(anime)}
+                    >
+                      <Bookmark
+                        size={14}
+                        fill={favorited ? 'currentColor' : 'none'}
+                        aria-hidden="true"
+                      />
+                      <span>{favorited ? 'Saved' : 'Favorite'}</span>
+                    </button>
+                    <Link to={`/anime/${anime.id}`} className="btn btn--secondary btn--compact">
+                      Details
+                    </Link>
+                  </div>
+                </div>
 
-          {/* Responsive ad slot below the video player & visually separate from episode controls */}
+                {synopsis && (
+                  <p
+                    style={{
+                      fontSize: '0.84375rem',
+                      lineHeight: 1.55,
+                      color: 'var(--text-secondary)',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {synopsis}
+                  </p>
+                )}
+              </section>
+            </>
+          )}
+
+          {/* Mounted immediately at t=0ms alongside skeletons so Adsterra never waits on AniList */}
           <div className="watch-ad-separator">
-            <AdSlot placement="watch-below-player" />
+            <AdSlot key="watch-below-player" placement="watch-below-player" />
           </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <aside className="watch-sidebar" aria-label="Episode selector">
-            <div className="section-header" style={{ marginBottom: '12px' }}>
-              <h2 className="section-title" style={{ fontSize: '1rem' }}>
-                Episodes
-              </h2>
-              {catalogue.airedEpisodeCount > 0 && (
-                <span className="section-subtitle tabular">
-                  {catalogue.airedEpisodeCount} listed
-                </span>
+          {isInitialLoading ? (
+            <div className="skeleton-block" style={{ height: '420px', width: '100%' }} />
+          ) : (
+            <aside className="watch-sidebar" aria-label="Episode selector">
+              <div className="section-header" style={{ marginBottom: '12px' }}>
+                <h2 className="section-title" style={{ fontSize: '1rem' }}>
+                  Episodes
+                </h2>
+                {catalogue.airedEpisodeCount > 0 && (
+                  <span className="section-subtitle tabular">
+                    {catalogue.airedEpisodeCount} listed
+                  </span>
+                )}
+              </div>
+
+              {!catalogue.hasExactEpisodeCount && (
+                <form
+                  style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const parsed = Number.parseInt(manualEpInput, 10);
+                    if (Number.isInteger(parsed) && parsed >= 1) {
+                      setNavigationState(parsed, currentAudio);
+                      setManualEpInput('');
+                    }
+                  }}
+                >
+                  <input
+                    type="number"
+                    min={1}
+                    className="field-input"
+                    style={{ height: '32px', fontSize: '0.8125rem' }}
+                    placeholder="Jump to episode #..."
+                    aria-label="Jump to episode number"
+                    value={manualEpInput}
+                    onChange={(e) => setManualEpInput(e.target.value)}
+                  />
+                  <button type="submit" className="btn btn--secondary btn--compact">
+                    Go
+                  </button>
+                </form>
               )}
-            </div>
 
-            {!catalogue.hasExactEpisodeCount && (
-              <form
-                style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const parsed = Number.parseInt(manualEpInput, 10);
-                  if (Number.isInteger(parsed) && parsed >= 1) {
-                    setNavigationState(parsed, currentAudio);
-                    setManualEpInput('');
-                  }
-                }}
-              >
-                <input
-                  type="number"
-                  min={1}
-                  className="field-input"
-                  style={{ height: '32px', fontSize: '0.8125rem' }}
-                  placeholder="Jump to episode #..."
-                  aria-label="Jump to episode number"
-                  value={manualEpInput}
-                  onChange={(e) => setManualEpInput(e.target.value)}
-                />
-                <button type="submit" className="btn btn--secondary btn--compact">
-                  Go
-                </button>
-              </form>
-            )}
+              <EpisodeList
+                animeId={anime.id}
+                catalogue={catalogue}
+                currentEpisode={currentEpisode}
+                audio={currentAudio}
+                compact
+                onSelectEpisode={(epNum) => setNavigationState(epNum, currentAudio)}
+              />
+            </aside>
+          )}
 
-            <EpisodeList
-              animeId={anime.id}
-              catalogue={catalogue}
-              currentEpisode={currentEpisode}
-              audio={currentAudio}
-              compact
-              onSelectEpisode={(epNum) => setNavigationState(epNum, currentAudio)}
-            />
-          </aside>
-
-          <AdSlot placement="watch-sidebar-rectangle" />
+          <AdSlot key="watch-sidebar-rectangle" placement="watch-sidebar-rectangle" />
         </div>
       </div>
     </div>

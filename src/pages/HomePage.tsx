@@ -4,13 +4,52 @@ import { AnimeCard } from '../components/anime/AnimeCard';
 import { CatalogueRow } from '../components/anime/CatalogueRow';
 import { FeaturedHero } from '../components/anime/FeaturedHero';
 import { RecentEpisodeCard } from '../components/anime/RecentEpisodeCard';
-import { HomeSkeleton } from '../components/anime/Skeletons';
+import { AnimeGridSkeleton } from '../components/anime/Skeletons';
 import { ErrorState } from '../components/ui/StateFeedback';
 import { getHomeCatalogue, getSeededRecommendations } from '../services/anilist/anilistService';
 import { useFavorites } from '../services/storage/favoritesStore';
 import { useWatchHistory } from '../services/storage/historyStore';
 import type { AnimeSummary, HomeCatalogueData } from '../types/anime';
 import { formatSeasonName } from '../utils/format';
+
+function HomeHeroSkeleton() {
+  return (
+    <div
+      style={{
+        minHeight: '420px',
+        borderBottom: '1px solid var(--border-subtle)',
+        display: 'flex',
+        alignItems: 'flex-end',
+        paddingBottom: '32px',
+      }}
+    >
+      <div className="container" style={{ width: '100%' }}>
+        <div style={{ maxWidth: '520px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="skeleton-block" style={{ height: '14px', width: '180px' }} />
+          <div className="skeleton-block" style={{ height: '38px', width: '88%' }} />
+          <div className="skeleton-block" style={{ height: '56px', width: '100%' }} />
+          <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+            <div className="skeleton-block" style={{ height: '40px', width: '132px' }} />
+            <div className="skeleton-block" style={{ height: '40px', width: '104px' }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HomeRowsSkeleton({ count = 2 }: { count?: number }) {
+  return (
+    <>
+      {Array.from({ length: count }, (_, idx) => (
+        <div key={idx} className="catalogue-section">
+          <div className="skeleton-block" style={{ height: '22px', width: '190px' }} />
+          <AnimeGridSkeleton count={6} />
+        </div>
+      ))}
+    </>
+  );
+}
 
 export function HomePage() {
   const [data, setData] = useState<HomeCatalogueData | null>(null);
@@ -68,11 +107,7 @@ export function HomePage() {
     return () => controller.abort();
   }, [seedAnimeId]);
 
-  if (loading && !data) {
-    return <HomeSkeleton />;
-  }
-
-  if (errorMessage && !data) {
+  if (errorMessage && !data && !loading) {
     return (
       <div className="container" style={{ paddingTop: '40px' }}>
         <ErrorState
@@ -84,107 +119,125 @@ export function HomePage() {
     );
   }
 
-  if (!data) {
-    return null;
-  }
+  const isInitialLoading = loading && !data;
 
-  const seasonLabel = `${formatSeasonName(data.seasonInfo.season) ?? ''} ${
-    data.seasonInfo.year
-  }`.trim();
+  const seasonLabel = data
+    ? `${formatSeasonName(data.seasonInfo.season) ?? ''} ${data.seasonInfo.year}`.trim()
+    : '';
 
   return (
-    <div>
-      <FeaturedHero items={data.trending} />
+    <div aria-busy={isInitialLoading || undefined}>
+      {isInitialLoading || !data ? (
+        <HomeHeroSkeleton />
+      ) : (
+        <FeaturedHero items={data.trending} />
+      )}
 
       <div className="container catalogue-stack">
-        {history.length > 0 && (
-          <CatalogueRow
-            title="Continue Watching"
-            subtitle="Pick up where you left off"
-            viewAllHref="/history"
-            viewAllLabel="History"
-            wideCards
-          >
-            {history.slice(0, 8).map((entry) => (
-              <RecentEpisodeCard key={entry.animeId} mode="history" item={entry} />
-            ))}
-          </CatalogueRow>
+        {isInitialLoading || !data ? (
+          <HomeRowsSkeleton count={2} />
+        ) : (
+          <>
+            {history.length > 0 && (
+              <CatalogueRow
+                title="Continue Watching"
+                subtitle="Pick up where you left off"
+                viewAllHref="/history"
+                viewAllLabel="History"
+                wideCards
+              >
+                {history.slice(0, 8).map((entry) => (
+                  <RecentEpisodeCard key={entry.animeId} mode="history" item={entry} />
+                ))}
+              </CatalogueRow>
+            )}
+
+            {data.trending.length > 0 && (
+              <CatalogueRow
+                title="Trending Now"
+                subtitle="Most active across AniList"
+                viewAllHref="/search?sort=TRENDING_DESC"
+              >
+                {data.trending.map((anime, index) => (
+                  <AnimeCard key={anime.id} anime={anime} eager={index < 6} />
+                ))}
+              </CatalogueRow>
+            )}
+
+            {data.recentlyReleased.length > 0 && (
+              <CatalogueRow
+                title="Recently Released"
+                subtitle="Latest aired episodes"
+                wideCards
+              >
+                {data.recentlyReleased.map((item) => (
+                  <RecentEpisodeCard
+                    key={`${item.media.id}-${item.episode}`}
+                    mode="airing"
+                    item={item}
+                  />
+                ))}
+              </CatalogueRow>
+            )}
+
+            {data.seasonal.length > 0 && (
+              <CatalogueRow
+                title={`${seasonLabel} Season`}
+                subtitle="Current seasonal lineup"
+                viewAllHref={`/search?season=${data.seasonInfo.season}&year=${data.seasonInfo.year}`}
+              >
+                {data.seasonal.map((anime) => (
+                  <AnimeCard key={anime.id} anime={anime} />
+                ))}
+              </CatalogueRow>
+            )}
+          </>
         )}
 
-        {data.trending.length > 0 && (
-          <CatalogueRow
-            title="Trending Now"
-            subtitle="Most active across AniList"
-            viewAllHref="/search?sort=TRENDING_DESC"
-          >
-            {data.trending.map((anime, index) => (
-              <AnimeCard key={anime.id} anime={anime} eager={index < 6} />
-            ))}
-          </CatalogueRow>
+        <AdSlot key="home-mid-banner" placement="home-mid-banner" />
+
+        {isInitialLoading || !data ? (
+          <HomeRowsSkeleton count={2} />
+        ) : (
+          <>
+            {recommended.length > 0 && seedTitle && (
+              <CatalogueRow
+                title="Recommended For You"
+                subtitle={`Based on ${seedTitle}`}
+              >
+                {recommended.map((anime) => (
+                  <AnimeCard key={anime.id} anime={anime} />
+                ))}
+              </CatalogueRow>
+            )}
+
+            {data.popular.length > 0 && (
+              <CatalogueRow
+                title="All-Time Popular"
+                subtitle="Essential series & films"
+                viewAllHref="/search?sort=POPULARITY_DESC"
+              >
+                {data.popular.map((anime, index) => (
+                  <AnimeCard key={anime.id} anime={anime} rank={index + 1} />
+                ))}
+              </CatalogueRow>
+            )}
+
+            {data.topRated.length > 0 && (
+              <CatalogueRow
+                title="Highest Rated"
+                subtitle="Critically acclaimed on AniList"
+                viewAllHref="/search?sort=SCORE_DESC"
+              >
+                {data.topRated.map((anime) => (
+                  <AnimeCard key={anime.id} anime={anime} />
+                ))}
+              </CatalogueRow>
+            )}
+          </>
         )}
 
-        {data.recentlyReleased.length > 0 && (
-          <CatalogueRow
-            title="Recently Released"
-            subtitle="Latest aired episodes"
-            wideCards
-          >
-            {data.recentlyReleased.map((item) => (
-              <RecentEpisodeCard key={`${item.media.id}-${item.episode}`} mode="airing" item={item} />
-            ))}
-          </CatalogueRow>
-        )}
-
-        {data.seasonal.length > 0 && (
-          <CatalogueRow
-            title={`${seasonLabel} Season`}
-            subtitle="Current seasonal lineup"
-            viewAllHref={`/search?season=${data.seasonInfo.season}&year=${data.seasonInfo.year}`}
-          >
-            {data.seasonal.map((anime) => (
-              <AnimeCard key={anime.id} anime={anime} />
-            ))}
-          </CatalogueRow>
-        )}
-
-        <AdSlot placement="home-mid-banner" />
-
-        {recommended.length > 0 && seedTitle && (
-          <CatalogueRow
-            title="Recommended For You"
-            subtitle={`Based on ${seedTitle}`}
-          >
-            {recommended.map((anime) => (
-              <AnimeCard key={anime.id} anime={anime} />
-            ))}
-          </CatalogueRow>
-        )}
-
-        {data.popular.length > 0 && (
-          <CatalogueRow
-            title="All-Time Popular"
-            subtitle="Essential series & films"
-            viewAllHref="/search?sort=POPULARITY_DESC"
-          >
-            {data.popular.map((anime, index) => (
-              <AnimeCard key={anime.id} anime={anime} rank={index + 1} />
-            ))}
-          </CatalogueRow>
-        )}
-
-        {data.topRated.length > 0 && (
-          <CatalogueRow
-            title="Highest Rated"
-            subtitle="Critically acclaimed on AniList"
-            viewAllHref="/search?sort=SCORE_DESC"
-          >
-            {data.topRated.map((anime) => (
-              <AnimeCard key={anime.id} anime={anime} />
-            ))}
-          </CatalogueRow>
-        )}
-
-        <AdSlot placement="home-footer-rectangle" />
+        <AdSlot key="home-footer-rectangle" placement="home-footer-rectangle" />
       </div>
     </div>
   );

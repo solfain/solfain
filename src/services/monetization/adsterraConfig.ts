@@ -160,14 +160,14 @@ export function createAdsterraAdapter(
         return { rendered: false, reason: 'No Adsterra unit configured for this slot.' };
       }
 
-      // Wait one short tick before entering the queue so React 19 StrictMode's
-      // throwaway first mount/cleanup cancels cleanly without loading duplicates.
+      // 0ms macrotask cancels cleanly on React 19 StrictMode's synchronous
+      // initial mount/cleanup cycle without adding artificial delay.
       const survivedStrictMode = await new Promise<boolean>((resolve) => {
         if (context.signal.aborted) {
           resolve(false);
           return;
         }
-        const timer = window.setTimeout(() => resolve(!context.signal.aborted), 20);
+        const timer = window.setTimeout(() => resolve(!context.signal.aborted), 0);
         context.signal.addEventListener(
           'abort',
           () => {
@@ -238,6 +238,8 @@ export function createAdsterraAdapter(
 
               const script = document.createElement('script');
               script.type = 'text/javascript';
+              script.async = true;
+              script.setAttribute('fetchpriority', 'high');
               script.src = currentUrl;
               script.setAttribute('data-adsterra-key', unit.key);
 
@@ -260,10 +262,10 @@ export function createAdsterraAdapter(
               context.container.appendChild(script);
             };
 
-            // Release queue if script load neither fires onload nor onerror (e.g. jsdom)
+            // Release queue promptly if script load neither fires onload nor onerror (e.g. jsdom)
             const safetyTimer = window.setTimeout(() => {
               finish({ rendered: true });
-            }, 1500);
+            }, 400);
 
             context.signal.addEventListener(
               'abort',
