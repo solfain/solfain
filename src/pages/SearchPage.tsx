@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
-import { AdSlot } from '../components/ads/AdSlot';
+import { AdSlot } from '../components/monetization/SponsorSlot';
 import { AnimeCard } from '../components/anime/AnimeCard';
 import { AnimeGridSkeleton } from '../components/anime/Skeletons';
 import { EmptyState, ErrorState } from '../components/ui/StateFeedback';

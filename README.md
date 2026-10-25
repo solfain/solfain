@@ -79,12 +79,12 @@ Solfain streams directly through **Yenime** (`https://player.yenime.net`) via a 
 
 ## Monetization (Perch Ads)
 
-`AdSlot` (`src/components/ads/AdSlot.tsx`) and `PERCH_ADS_SLOTS` (`src/services/ads/perchAdsConfig.ts`) integrate **Perch Ads** (`https://www.perchads.com/embed.js`):
+`AdSlot` (`src/components/monetization/SponsorSlot.tsx`) and `PERCH_ADS_SLOTS` (`src/services/monetization/perchConfig.ts`) integrate **Perch Ads** (`https://www.perchads.com/embed.js`):
 
 - **Live `300×250` Medium Rectangle (`data-space="f83vmd3w8e"`)**:
+  - `home-top-rectangle` — Homepage (`/`) right below the Featured Hero
   - `sidebar-rectangle` — Anime Details (`/anime/:id`) right-hand dossier sidebar
   - `watch-sidebar-rectangle` — Watch Page (`/watch/:id`) right-hand rail below the episode selector
-  - `home-mid-rectangle` — Homepage (`/`) mid-catalogue slot
   - `search-bottom-rectangle` — Browse & Search (`/search`) bottom slot
-- **Reserved `728×90` / `320×50` Leaderboard Placeholders** (ready for additional `data-space` IDs in `src/services/ads/perchAdsConfig.ts`):
+- **Reserved `728×90` / `320×50` Leaderboard Placeholders** (ready for additional `data-space` IDs in `src/services/monetization/perchConfig.ts`):
   - `home-leaderboard`, `home-footer-banner`, `search-top-banner`, `details-inline`, `details-bottom-banner`, `watch-below-player`, `collection-footer-banner`

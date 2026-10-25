@@ -8,7 +8,7 @@ import {
   ChevronRight,
   RefreshCw,
 } from 'lucide-react';
-import { AdSlot } from '../components/ads/AdSlot';
+import { AdSlot } from '../components/monetization/SponsorSlot';
 import { EpisodeList } from '../components/anime/EpisodeList';
 import { WatchSkeleton } from '../components/anime/Skeletons';
 import { ErrorState } from '../components/ui/StateFeedback';

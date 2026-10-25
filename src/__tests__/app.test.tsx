@@ -2,11 +2,11 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../App';
-import { AdSlot } from '../components/ads/AdSlot';
+import { AdSlot } from '../components/monetization/SponsorSlot';
 import {
   registerAdNetworkAdapter,
   resetAdNetworkAdapter,
-} from '../services/ads/adRegistry';
+} from '../services/monetization/slotRegistry';
 import { clearAniListCache } from '../services/anilist/client';
 import { resetFavoritesCacheForTests } from '../services/storage/favoritesStore';
 import { resetHistoryCacheForTests } from '../services/storage/historyStore';
@@ -172,7 +172,7 @@ describe('Solfain Application Flows & Acceptance Criteria', () => {
     expect(screen.getByRole('heading', { name: 'Trending Now' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Recently Released' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'All-Time Popular' })).toBeInTheDocument();
-    expect(screen.getAllByLabelText('Advertisement')).toHaveLength(3);
+    expect(screen.getAllByLabelText('Sponsored unit')).toHaveLength(3);
 
     // Strictly verify absence of any beta banner text
     expect(screen.queryByText(/SOLFAIN IS IN BETA/i)).not.toBeInTheDocument();
@@ -312,10 +312,14 @@ describe('Solfain Application Flows & Acceptance Criteria', () => {
   it('mounts live Perch Ads 300x250 script (data-space="f83vmd3w8e") and degrades gracefully on block/disable', async () => {
     const { container, unmount } = render(<AdSlot placement="sidebar-rectangle" />);
 
-    const script = container.querySelector('script[data-space="f83vmd3w8e"]') as HTMLScriptElement | null;
-    expect(script).not.toBeNull();
-    expect(script?.getAttribute('src')).toBe('https://www.perchads.com/embed.js');
-    expect(script?.async).toBe(true);
+    await waitFor(() => {
+      const script = container.querySelector('script[data-space="f83vmd3w8e"]');
+      expect(script).not.toBeNull();
+    });
+
+    const script = container.querySelector('script[data-space="f83vmd3w8e"]') as HTMLScriptElement;
+    expect(script.getAttribute('src')).toBe('https://www.perchads.com/embed.js');
+    expect(script.async).toBe(true);
     unmount();
 
     registerAdNetworkAdapter({
@@ -330,10 +334,10 @@ describe('Solfain Application Flows & Acceptance Criteria', () => {
     const { rerender } = render(<AdSlot placement="home-leaderboard" />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Perch Ads placeholder/i)).toBeInTheDocument();
+      expect(screen.getByText(/blocked by browser shield/i)).toBeInTheDocument();
     });
 
     rerender(<AdSlot placement="home-leaderboard" enabled={false} />);
-    expect(screen.queryByLabelText('Advertisement')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Sponsored unit')).not.toBeInTheDocument();
   });
 });

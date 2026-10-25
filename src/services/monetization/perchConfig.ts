@@ -3,7 +3,7 @@ import type {
   AdPlacement,
   AdSlotRenderContext,
   PerchSlotConfig,
-} from '../../types/ads';
+} from '../../types/monetization';
 
 export const PERCH_EMBED_SCRIPT_URL = 'https://www.perchads.com/embed.js';
 
@@ -24,16 +24,17 @@ const MEDIUM_RECTANGLE_DIMS = {
   mobileHeight: 250,
 } as const;
 
-/**
- * Perch Ads (https://www.perchads.com) slot inventory for Solfain.
- * - 300x250 Medium Rectangle slots are wired to live space `f83vmd3w8e`.
- * - 728x90 / 320x50 Leaderboard slots remain ready in placeholder mode until
- *   their `desktopSpaceId` / `mobileSpaceId` values are added.
- */
 export const PERCH_ADS_SLOTS: Record<AdPlacement, PerchSlotConfig> = {
+  'home-top-rectangle': {
+    placement: 'home-top-rectangle',
+    label: 'Home Spotlight Rectangle',
+    perchFormat: 'Medium Rectangle',
+    dimensions: MEDIUM_RECTANGLE_DIMS,
+    desktopSpaceId: PERCH_SPACE_300X250,
+  },
   'home-leaderboard': {
     placement: 'home-leaderboard',
-    label: 'Home Top Leaderboard',
+    label: 'Home Mid-Page Leaderboard',
     perchFormat: 'Leaderboard / Mobile Banner',
     dimensions: LEADERBOARD_DIMS,
     desktopSpaceId: '',
@@ -41,14 +42,14 @@ export const PERCH_ADS_SLOTS: Record<AdPlacement, PerchSlotConfig> = {
   },
   'home-mid-rectangle': {
     placement: 'home-mid-rectangle',
-    label: 'Home Mid-Catalogue Rectangle',
+    label: 'Home Catalogue Rectangle',
     perchFormat: 'Medium Rectangle',
     dimensions: MEDIUM_RECTANGLE_DIMS,
     desktopSpaceId: PERCH_SPACE_300X250,
   },
   'home-footer-banner': {
     placement: 'home-footer-banner',
-    label: 'Home Bottom Leaderboard',
+    label: 'Home Footer Leaderboard',
     perchFormat: 'Leaderboard / Mobile Banner',
     dimensions: LEADERBOARD_DIMS,
     desktopSpaceId: '',
@@ -145,6 +146,11 @@ export function createPerchAdsAdapter(
       if (!slot) return false;
       return Boolean(selectSpaceId(slot));
     },
+    getPlacementSpaceId(placement: AdPlacement): string {
+      const slot = slots[placement];
+      if (!slot) return '';
+      return selectSpaceId(slot);
+    },
     async mountSlot(context: AdSlotRenderContext) {
       const slot = slots[context.placement];
       if (!slot) {
@@ -167,25 +173,47 @@ export function createPerchAdsAdapter(
           return;
         }
 
-        context.container.innerHTML = '';
-        const script = document.createElement('script');
-        script.async = true;
-        script.src = scriptSrc;
-        script.setAttribute('data-space', spaceId);
-
-        script.onload = () => {
-          if (!context.signal.aborted) {
-            resolve({ rendered: true });
+        // Defer by one short tick so React 19 StrictMode's throwaway initial
+        // mount/cleanup cycle cancels cleanly without creating a detached <script>.
+        const mountTimer = window.setTimeout(() => {
+          if (context.signal.aborted) {
+            resolve({ rendered: false, reason: 'Aborted' });
+            return;
           }
-        };
-        script.onerror = () => {
-          if (!context.signal.aborted) {
-            context.container.innerHTML = '';
-            resolve({ rendered: false, reason: 'Perch Ads embed.js failed to load.' });
-          }
-        };
 
-        context.container.appendChild(script);
+          context.container.innerHTML = '';
+          const script = document.createElement('script');
+          script.async = true;
+          script.src = scriptSrc;
+          script.setAttribute('data-space', spaceId);
+
+          script.onload = () => {
+            if (!context.signal.aborted) {
+              resolve({ rendered: true });
+            }
+          };
+          script.onerror = () => {
+            if (!context.signal.aborted) {
+              context.container.innerHTML = '';
+              resolve({
+                rendered: false,
+                blocked: true,
+                reason: 'Perch Ads script was blocked by browser or network.',
+              });
+            }
+          };
+
+          context.container.appendChild(script);
+        }, 20);
+
+        context.signal.addEventListener(
+          'abort',
+          () => {
+            window.clearTimeout(mountTimer);
+            resolve({ rendered: false, reason: 'Aborted' });
+          },
+          { once: true },
+        );
       });
     },
     unmountSlot(container: HTMLElement) {

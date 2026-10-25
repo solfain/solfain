@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Bookmark, Film, Play, Star } from 'lucide-react';
-import { AdSlot } from '../components/ads/AdSlot';
+import { AdSlot } from '../components/monetization/SponsorSlot';
 import { AnimeCard } from '../components/anime/AnimeCard';
 import { EpisodeList } from '../components/anime/EpisodeList';
 import { DetailsSkeleton } from '../components/anime/Skeletons';

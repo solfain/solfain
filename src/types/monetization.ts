@@ -1,4 +1,5 @@
 export type AdPlacement =
+  | 'home-top-rectangle'
   | 'home-leaderboard'
   | 'home-mid-rectangle'
   | 'home-footer-banner'
@@ -48,6 +49,7 @@ export interface AdSlotRenderContext {
 
 export interface AdRenderOutcome {
   rendered: boolean;
+  blocked?: boolean;
   reason?: string;
 }
 
@@ -56,6 +58,7 @@ export interface AdNetworkAdapter {
   readonly name: string;
   readonly isConfigured: boolean;
   isPlacementConfigured?(placement: AdPlacement): boolean;
+  getPlacementSpaceId?(placement: AdPlacement): string;
   mountSlot(context: AdSlotRenderContext): Promise<AdRenderOutcome>;
   unmountSlot?(container: HTMLElement): void;
 }

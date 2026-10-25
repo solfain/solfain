@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bookmark } from 'lucide-react';
-import { AdSlot } from '../components/ads/AdSlot';
+import { AdSlot } from '../components/monetization/SponsorSlot';
 import { AnimeCard } from '../components/anime/AnimeCard';
 import { EmptyState } from '../components/ui/StateFeedback';
 import { useFavorites } from '../services/storage/favoritesStore';

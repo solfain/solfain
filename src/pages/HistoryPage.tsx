@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, Play, Trash2, X } from 'lucide-react';
-import { AdSlot } from '../components/ads/AdSlot';
+import { AdSlot } from '../components/monetization/SponsorSlot';
 import { EmptyState } from '../components/ui/StateFeedback';
 import { useWatchHistory } from '../services/storage/historyStore';
 import {

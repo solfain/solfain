@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AdSlot } from '../components/ads/AdSlot';
+import { AdSlot } from '../components/monetization/SponsorSlot';
 import { AnimeCard } from '../components/anime/AnimeCard';
 import { CatalogueRow } from '../components/anime/CatalogueRow';
 import { FeaturedHero } from '../components/anime/FeaturedHero';
@@ -97,7 +97,7 @@ export function HomePage() {
       <FeaturedHero items={data.trending} />
 
       <div className="container catalogue-stack">
-        <AdSlot placement="home-leaderboard" />
+        <AdSlot placement="home-top-rectangle" />
 
         {history.length > 0 && (
           <CatalogueRow
@@ -149,7 +149,7 @@ export function HomePage() {
           </CatalogueRow>
         )}
 
-        <AdSlot placement="home-mid-rectangle" />
+        <AdSlot placement="home-leaderboard" />
 
         {recommended.length > 0 && seedTitle && (
           <CatalogueRow

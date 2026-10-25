@@ -3,8 +3,8 @@ import type {
   AdNetworkAdapter,
   AdPlacement,
   AdSystemSettings,
-} from '../../types/ads';
-import { createPerchAdsAdapter, PERCH_ADS_SLOTS } from './perchAdsConfig';
+} from '../../types/monetization';
+import { createPerchAdsAdapter, PERCH_ADS_SLOTS } from './perchConfig';
 
 export const DEFAULT_AD_DIMENSIONS: Record<AdPlacement, AdDimensions> = Object.fromEntries(
   Object.entries(PERCH_ADS_SLOTS).map(([key, config]) => [key, config.dimensions]),
@@ -15,6 +15,7 @@ const defaultPerchAdapter: AdNetworkAdapter = createPerchAdsAdapter(PERCH_ADS_SL
 let activeAdAdapter: AdNetworkAdapter = defaultPerchAdapter;
 
 const defaultPlacementsEnabled: Record<AdPlacement, boolean> = {
+  'home-top-rectangle': true,
   'home-leaderboard': true,
   'home-mid-rectangle': true,
   'home-footer-banner': true,
