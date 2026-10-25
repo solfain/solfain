@@ -1023,15 +1023,24 @@
   position: relative;
   z-index: 2;
   width: 100%;
+  min-height: var(--slot-desktop-h, 250px);
+  color-scheme: normal;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.sponsor-unit-live__mount iframe {
+  color-scheme: normal;
+  border: 0;
+  display: block;
 }
 
 .sponsor-unit-live__fallback {
   position: absolute;
   inset: 0;
   z-index: 1;
+  pointer-events: none;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -1121,7 +1130,8 @@
 
 @media (max-width: 760px) {
   .sponsor-unit-live,
-  .sponsor-unit-live__stage {
+  .sponsor-unit-live__stage,
+  .sponsor-unit-live__mount {
     max-width: min(100%, var(--slot-mobile-w, 300px));
     min-height: var(--slot-mobile-h, 250px);
   }

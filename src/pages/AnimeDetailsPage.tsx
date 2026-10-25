@@ -353,8 +353,6 @@ export function AnimeDetailsPage() {
                 </div>
               </section>
             )}
-
-            <AdSlot placement="details-bottom-banner" />
           </div>
 
           <aside className="details-sidebar" aria-label="Series information">

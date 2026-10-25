@@ -79,7 +79,7 @@ Solfain streams directly through **Yenime** (`https://player.yenime.net`) via a 
 
 ## Monetization (Adsterra)
 
-`AdSlot` (`src/components/monetization/SponsorSlot.tsx`) and `ADSTERRA_SLOTS` (`src/services/monetization/adsterraConfig.ts`) mount **Adsterra** `atOptions` units inside isolated same-origin iframes so multiple units can coexist on the same page without global `window.atOptions` collisions while keeping the **top of the Homepage clean**:
+`AdSlot` (`src/components/monetization/SponsorSlot.tsx`) and `ADSTERRA_SLOTS` (`src/services/monetization/adsterraConfig.ts`) mount **Adsterra** `atOptions` units directly in the top-level DOM (`window === window.top`) via a sequential mount queue so multiple units can coexist on the same page without global `window.atOptions` collisions while keeping the **top of the Homepage clean**:
 
 - **`300×250` Medium Rectangle (`8031ff5e7be9985553dcdea4bbb45d96`)**:
   - `sidebar-rectangle` — Anime Details (`/anime/:id`) right-hand dossier sidebar

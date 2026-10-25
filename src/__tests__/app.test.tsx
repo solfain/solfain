@@ -310,24 +310,30 @@ describe('Solfain Application Flows & Acceptance Criteria', () => {
     expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument();
   });
 
-  it('mounts live Adsterra 300x250 & 320x50 units in isolated iframes and degrades gracefully on block/disable', async () => {
+  it('mounts live Adsterra 300x250 & 320x50 scripts directly in top-level DOM and degrades gracefully on block/disable', async () => {
     const { container, unmount } = render(<AdSlot placement="sidebar-rectangle" />);
 
     await waitFor(() => {
-      const iframe = container.querySelector(
-        'iframe[data-adsterra-key="8031ff5e7be9985553dcdea4bbb45d96"]',
+      const script = container.querySelector(
+        'script[data-adsterra-key="8031ff5e7be9985553dcdea4bbb45d96"]',
       );
-      expect(iframe).not.toBeNull();
+      expect(script).not.toBeNull();
     });
 
-    const rectIframe = container.querySelector(
-      'iframe[data-adsterra-key="8031ff5e7be9985553dcdea4bbb45d96"]',
-    ) as HTMLIFrameElement;
-    expect(rectIframe.getAttribute('width')).toBe('300');
-    expect(rectIframe.getAttribute('height')).toBe('250');
-    expect(rectIframe.getAttribute('data-adsterra-src')).toBe(
+    const rectScript = container.querySelector(
+      'script[data-adsterra-key="8031ff5e7be9985553dcdea4bbb45d96"]',
+    ) as HTMLScriptElement;
+    expect(rectScript.getAttribute('src')).toBe(
       'https://bauval.org/22/8031ff5e7be9985553dcdea4bbb45d96',
     );
+    expect(window.atOptions).toEqual({
+      key: '8031ff5e7be9985553dcdea4bbb45d96',
+      format: 'iframe',
+      height: 250,
+      width: 300,
+      params: {},
+    });
+    rectScript.dispatchEvent(new Event('load'));
     unmount();
 
     const { container: bannerContainer, unmount: unmountBanner } = render(
@@ -335,20 +341,26 @@ describe('Solfain Application Flows & Acceptance Criteria', () => {
     );
 
     await waitFor(() => {
-      const iframe = bannerContainer.querySelector(
-        'iframe[data-adsterra-key="6339f8aa4607b6c12e213fc4cf317df1"]',
+      const script = bannerContainer.querySelector(
+        'script[data-adsterra-key="6339f8aa4607b6c12e213fc4cf317df1"]',
       );
-      expect(iframe).not.toBeNull();
+      expect(script).not.toBeNull();
     });
 
-    const bannerIframe = bannerContainer.querySelector(
-      'iframe[data-adsterra-key="6339f8aa4607b6c12e213fc4cf317df1"]',
-    ) as HTMLIFrameElement;
-    expect(bannerIframe.getAttribute('width')).toBe('320');
-    expect(bannerIframe.getAttribute('height')).toBe('50');
-    expect(bannerIframe.getAttribute('data-adsterra-src')).toBe(
+    const bannerScript = bannerContainer.querySelector(
+      'script[data-adsterra-key="6339f8aa4607b6c12e213fc4cf317df1"]',
+    ) as HTMLScriptElement;
+    expect(bannerScript.getAttribute('src')).toBe(
       'https://bauval.org/22/6339f8aa4607b6c12e213fc4cf317df1',
     );
+    expect(window.atOptions).toEqual({
+      key: '6339f8aa4607b6c12e213fc4cf317df1',
+      format: 'iframe',
+      height: 50,
+      width: 320,
+      params: {},
+    });
+    bannerScript.dispatchEvent(new Event('load'));
     unmountBanner();
 
     registerAdNetworkAdapter({
