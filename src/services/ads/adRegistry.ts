@@ -16,10 +16,10 @@ let activeAdAdapter: AdNetworkAdapter = defaultPerchAdapter;
 
 const defaultPlacementsEnabled: Record<AdPlacement, boolean> = {
   'home-leaderboard': true,
-  'home-mid-catalogue': true,
+  'home-mid-rectangle': true,
   'home-footer-banner': true,
   'search-top-banner': true,
-  'search-bottom-banner': true,
+  'search-bottom-rectangle': true,
   'details-inline': true,
   'details-bottom-banner': true,
   'sidebar-rectangle': true,

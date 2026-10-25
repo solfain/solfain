@@ -429,7 +429,7 @@ export function SearchPage() {
           )}
 
           <div style={{ marginTop: '32px' }}>
-            <AdSlot placement="search-bottom-banner" />
+            <AdSlot placement="search-bottom-rectangle" />
           </div>
         </>
       )}

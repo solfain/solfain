@@ -149,7 +149,7 @@ export function HomePage() {
           </CatalogueRow>
         )}
 
-        <AdSlot placement="home-mid-catalogue" />
+        <AdSlot placement="home-mid-rectangle" />
 
         {recommended.length > 0 && seedTitle && (
           <CatalogueRow

@@ -77,14 +77,14 @@ Solfain streams directly through **Yenime** (`https://player.yenime.net`) via a 
 2. **Episode Lists**: Because `api.yenime.net` documents an iframe player endpoint rather than a JSON episode-list API, episode counts, airing schedules (`nextAiringEpisode`), and available episode titles/thumbnails (`streamingEpisodes`) are populated from **AniList**.
 3. **Player Events & Auto-Next**: `player.yenime.net` posts `PLAYER_EVENT` messages (`play`, `pause`, `seeked`, `ended`, `timeupdate`) with `currentTime` and `duration`. Solfain validates `event.origin === 'https://player.yenime.net'` to persist playback progress in Watch History and automatically advance to the next episode when `Auto-Next` is enabled.
 
-## Monetization Readiness (Perch Ads)
+## Monetization (Perch Ads)
 
-`AdSlot` (`src/components/ads/AdSlot.tsx`) and `PERCH_ADS_SLOTS` (`src/services/ads/perchAdsConfig.ts`) configure reserved, layout-stable **Perch Ads** (`https://www.perchads.com`) placements across the site using official Perch Ads sizes (`728×90` Leaderboard paired with `320×50` Mobile Banner, plus `300×250` Medium Rectangle):
+`AdSlot` (`src/components/ads/AdSlot.tsx`) and `PERCH_ADS_SLOTS` (`src/services/ads/perchAdsConfig.ts`) integrate **Perch Ads** (`https://www.perchads.com/embed.js`):
 
-- **Homepage (`/`)**: `home-leaderboard` (below hero), `home-mid-catalogue` (below seasonal shelf), `home-footer-banner` (bottom of catalogue)
-- **Browse & Search (`/search`)**: `search-top-banner` (above results grid), `search-bottom-banner` (below pagination)
-- **Anime Details (`/anime/:id`)**: `details-inline` (below synopsis, above episodes), `sidebar-rectangle` (`300×250` sidebar), `details-bottom-banner` (below recommendations)
-- **Watch Page (`/watch/:id`)**: `watch-below-player` (separated below player & info), `watch-sidebar-rectangle` (`300×250` below episode list)
-- **Favorites & History (`/favorites`, `/history`)**: `collection-footer-banner` (bottom of page)
-
-To activate a live Perch Ads slot, paste the `<script src="...">` URL generated at `perchads.com/spaces/new` into `desktopScriptUrl` (and optional `mobileScriptUrl`) in `src/services/ads/perchAdsConfig.ts`.
+- **Live `300×250` Medium Rectangle (`data-space="f83vmd3w8e"`)**:
+  - `sidebar-rectangle` — Anime Details (`/anime/:id`) right-hand dossier sidebar
+  - `watch-sidebar-rectangle` — Watch Page (`/watch/:id`) right-hand rail below the episode selector
+  - `home-mid-rectangle` — Homepage (`/`) mid-catalogue slot
+  - `search-bottom-rectangle` — Browse & Search (`/search`) bottom slot
+- **Reserved `728×90` / `320×50` Leaderboard Placeholders** (ready for additional `data-space` IDs in `src/services/ads/perchAdsConfig.ts`):
+  - `home-leaderboard`, `home-footer-banner`, `search-top-banner`, `details-inline`, `details-bottom-banner`, `watch-below-player`, `collection-footer-banner`

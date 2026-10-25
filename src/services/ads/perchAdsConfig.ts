@@ -5,6 +5,11 @@ import type {
   PerchSlotConfig,
 } from '../../types/ads';
 
+export const PERCH_EMBED_SCRIPT_URL = 'https://www.perchads.com/embed.js';
+
+/** Live 300x250 Perch Ads space ID */
+export const PERCH_SPACE_300X250 = 'f83vmd3w8e';
+
 const LEADERBOARD_DIMS = {
   desktopWidth: 728,
   desktopHeight: 90,
@@ -21,8 +26,9 @@ const MEDIUM_RECTANGLE_DIMS = {
 
 /**
  * Perch Ads (https://www.perchads.com) slot inventory for Solfain.
- * Leave `desktopScriptUrl` / `mobileScriptUrl` empty while in placeholder mode;
- * paste your real Perch Ads embed script URLs when ready to go live.
+ * - 300x250 Medium Rectangle slots are wired to live space `f83vmd3w8e`.
+ * - 728x90 / 320x50 Leaderboard slots remain ready in placeholder mode until
+ *   their `desktopSpaceId` / `mobileSpaceId` values are added.
  */
 export const PERCH_ADS_SLOTS: Record<AdPlacement, PerchSlotConfig> = {
   'home-leaderboard': {
@@ -30,116 +36,114 @@ export const PERCH_ADS_SLOTS: Record<AdPlacement, PerchSlotConfig> = {
     label: 'Home Top Leaderboard',
     perchFormat: 'Leaderboard / Mobile Banner',
     dimensions: LEADERBOARD_DIMS,
-    desktopScriptUrl: '',
-    mobileScriptUrl: '',
+    desktopSpaceId: '',
+    mobileSpaceId: '',
   },
-  'home-mid-catalogue': {
-    placement: 'home-mid-catalogue',
-    label: 'Home Mid-Catalogue Banner',
-    perchFormat: 'Leaderboard / Mobile Banner',
-    dimensions: LEADERBOARD_DIMS,
-    desktopScriptUrl: '',
-    mobileScriptUrl: '',
+  'home-mid-rectangle': {
+    placement: 'home-mid-rectangle',
+    label: 'Home Mid-Catalogue Rectangle',
+    perchFormat: 'Medium Rectangle',
+    dimensions: MEDIUM_RECTANGLE_DIMS,
+    desktopSpaceId: PERCH_SPACE_300X250,
   },
   'home-footer-banner': {
     placement: 'home-footer-banner',
     label: 'Home Bottom Leaderboard',
     perchFormat: 'Leaderboard / Mobile Banner',
     dimensions: LEADERBOARD_DIMS,
-    desktopScriptUrl: '',
-    mobileScriptUrl: '',
+    desktopSpaceId: '',
+    mobileSpaceId: '',
   },
   'search-top-banner': {
     placement: 'search-top-banner',
     label: 'Browse Top Leaderboard',
     perchFormat: 'Leaderboard / Mobile Banner',
     dimensions: LEADERBOARD_DIMS,
-    desktopScriptUrl: '',
-    mobileScriptUrl: '',
+    desktopSpaceId: '',
+    mobileSpaceId: '',
   },
-  'search-bottom-banner': {
-    placement: 'search-bottom-banner',
-    label: 'Browse Bottom Leaderboard',
-    perchFormat: 'Leaderboard / Mobile Banner',
-    dimensions: LEADERBOARD_DIMS,
-    desktopScriptUrl: '',
-    mobileScriptUrl: '',
+  'search-bottom-rectangle': {
+    placement: 'search-bottom-rectangle',
+    label: 'Browse Bottom Rectangle',
+    perchFormat: 'Medium Rectangle',
+    dimensions: MEDIUM_RECTANGLE_DIMS,
+    desktopSpaceId: PERCH_SPACE_300X250,
   },
   'details-inline': {
     placement: 'details-inline',
     label: 'Details Inline Banner',
     perchFormat: 'Leaderboard / Mobile Banner',
     dimensions: LEADERBOARD_DIMS,
-    desktopScriptUrl: '',
-    mobileScriptUrl: '',
+    desktopSpaceId: '',
+    mobileSpaceId: '',
   },
   'details-bottom-banner': {
     placement: 'details-bottom-banner',
     label: 'Details Footer Leaderboard',
     perchFormat: 'Leaderboard / Mobile Banner',
     dimensions: LEADERBOARD_DIMS,
-    desktopScriptUrl: '',
-    mobileScriptUrl: '',
+    desktopSpaceId: '',
+    mobileSpaceId: '',
   },
   'sidebar-rectangle': {
     placement: 'sidebar-rectangle',
     label: 'Details Sidebar Rectangle',
     perchFormat: 'Medium Rectangle',
     dimensions: MEDIUM_RECTANGLE_DIMS,
-    desktopScriptUrl: '',
+    desktopSpaceId: PERCH_SPACE_300X250,
   },
   'watch-below-player': {
     placement: 'watch-below-player',
     label: 'Watch Below-Player Banner',
     perchFormat: 'Leaderboard / Mobile Banner',
     dimensions: LEADERBOARD_DIMS,
-    desktopScriptUrl: '',
-    mobileScriptUrl: '',
+    desktopSpaceId: '',
+    mobileSpaceId: '',
   },
   'watch-sidebar-rectangle': {
     placement: 'watch-sidebar-rectangle',
     label: 'Watch Sidebar Rectangle',
     perchFormat: 'Medium Rectangle',
     dimensions: MEDIUM_RECTANGLE_DIMS,
-    desktopScriptUrl: '',
+    desktopSpaceId: PERCH_SPACE_300X250,
   },
   'collection-footer-banner': {
     placement: 'collection-footer-banner',
     label: 'Collection Footer Leaderboard',
     perchFormat: 'Leaderboard / Mobile Banner',
     dimensions: LEADERBOARD_DIMS,
-    desktopScriptUrl: '',
-    mobileScriptUrl: '',
+    desktopSpaceId: '',
+    mobileSpaceId: '',
   },
 };
 
-function selectScriptUrl(slot: PerchSlotConfig): string {
+function selectSpaceId(slot: PerchSlotConfig): string {
   const isMobile =
     typeof window !== 'undefined' &&
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(max-width: 760px)').matches;
 
-  if (isMobile && slot.mobileScriptUrl?.trim()) {
-    return slot.mobileScriptUrl.trim();
+  if (isMobile && slot.mobileSpaceId?.trim()) {
+    return slot.mobileSpaceId.trim();
   }
-  return slot.desktopScriptUrl.trim();
+  return slot.desktopSpaceId.trim();
 }
 
 export function createPerchAdsAdapter(
   slots: Record<AdPlacement, PerchSlotConfig> = PERCH_ADS_SLOTS,
 ): AdNetworkAdapter {
-  const hasAnyScript = Object.values(slots).some(
-    (s) => Boolean(s.desktopScriptUrl.trim() || s.mobileScriptUrl?.trim()),
+  const hasAnySpace = Object.values(slots).some((s) =>
+    Boolean(s.desktopSpaceId.trim() || s.mobileSpaceId?.trim()),
   );
 
   return {
     id: 'perchads',
     name: 'Perch Ads',
-    isConfigured: hasAnyScript,
+    isConfigured: hasAnySpace,
     isPlacementConfigured(placement: AdPlacement): boolean {
       const slot = slots[placement];
       if (!slot) return false;
-      return Boolean(selectScriptUrl(slot));
+      return Boolean(selectSpaceId(slot));
     },
     async mountSlot(context: AdSlotRenderContext) {
       const slot = slots[context.placement];
@@ -147,13 +151,15 @@ export function createPerchAdsAdapter(
         return { rendered: false, reason: 'Unknown Perch Ads placement.' };
       }
 
-      const scriptUrl = selectScriptUrl(slot);
-      if (!scriptUrl) {
+      const spaceId = selectSpaceId(slot);
+      if (!spaceId) {
         return {
           rendered: false,
-          reason: 'Perch Ads space script URL not yet configured for this slot.',
+          reason: 'Perch Ads data-space ID not yet configured for this slot.',
         };
       }
+
+      const scriptSrc = slot.embedScriptUrl?.trim() || PERCH_EMBED_SCRIPT_URL;
 
       return new Promise((resolve) => {
         if (context.signal.aborted) {
@@ -164,10 +170,20 @@ export function createPerchAdsAdapter(
         context.container.innerHTML = '';
         const script = document.createElement('script');
         script.async = true;
-        script.src = scriptUrl;
-        script.onload = () => resolve({ rendered: true });
-        script.onerror = () =>
-          resolve({ rendered: false, reason: 'Perch Ads script failed to load.' });
+        script.src = scriptSrc;
+        script.setAttribute('data-space', spaceId);
+
+        script.onload = () => {
+          if (!context.signal.aborted) {
+            resolve({ rendered: true });
+          }
+        };
+        script.onerror = () => {
+          if (!context.signal.aborted) {
+            context.container.innerHTML = '';
+            resolve({ rendered: false, reason: 'Perch Ads embed.js failed to load.' });
+          }
+        };
 
         context.container.appendChild(script);
       });

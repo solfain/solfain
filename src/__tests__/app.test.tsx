@@ -309,7 +309,15 @@ describe('Solfain Application Flows & Acceptance Criteria', () => {
     expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument();
   });
 
-  it('degrades gracefully when an ad network provider throws or is disabled', async () => {
+  it('mounts live Perch Ads 300x250 script (data-space="f83vmd3w8e") and degrades gracefully on block/disable', async () => {
+    const { container, unmount } = render(<AdSlot placement="sidebar-rectangle" />);
+
+    const script = container.querySelector('script[data-space="f83vmd3w8e"]') as HTMLScriptElement | null;
+    expect(script).not.toBeNull();
+    expect(script?.getAttribute('src')).toBe('https://www.perchads.com/embed.js');
+    expect(script?.async).toBe(true);
+    unmount();
+
     registerAdNetworkAdapter({
       id: 'failing-network',
       name: 'Failing Ad Provider',
@@ -322,9 +330,8 @@ describe('Solfain Application Flows & Acceptance Criteria', () => {
     const { rerender } = render(<AdSlot placement="home-leaderboard" />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Advertisement')).toBeInTheDocument();
+      expect(screen.getByText(/Perch Ads placeholder/i)).toBeInTheDocument();
     });
-    expect(screen.getByText(/Perch Ads placeholder/i)).toBeInTheDocument();
 
     rerender(<AdSlot placement="home-leaderboard" enabled={false} />);
     expect(screen.queryByLabelText('Advertisement')).not.toBeInTheDocument();
