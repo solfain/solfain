@@ -375,7 +375,7 @@ describe('Solfain Application Flows & Acceptance Criteria', () => {
     const { rerender } = render(<AdSlot placement="sidebar-rectangle" />);
 
     await waitFor(() => {
-      expect(screen.getByText(/blocked by browser shield/i)).toBeInTheDocument();
+      expect(screen.getByText(/Filtered by VPN DNS or ad blocker/i)).toBeInTheDocument();
     });
 
     rerender(<AdSlot placement="sidebar-rectangle" enabled={false} />);

@@ -23,6 +23,11 @@ export interface AdsterraUnitSpec {
   width: number;
   height: number;
   invokeUrl: string;
+  /**
+   * Optional official Adsterra Anti-AdBlock / alternate invoke URLs from your
+   * Adsterra Publisher Dashboard, tried in order if the primary URL is DNS-blocked.
+   */
+  fallbackInvokeUrls?: string[];
   params?: Record<string, unknown>;
 }
 

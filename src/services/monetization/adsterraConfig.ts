@@ -204,29 +204,60 @@ export function createAdsterraAdapter(
 
             context.container.innerHTML = '';
 
-            // Set exact global atOptions right before appending this unit's invoke script
-            window.atOptions = {
-              key: unit.key,
-              format: unit.format,
-              height: unit.height,
-              width: unit.width,
-              params: { ...(unit.params ?? {}) },
-            };
+            const candidateUrls = [
+              unit.invokeUrl,
+              ...(unit.fallbackInvokeUrls ?? []).filter((u) => Boolean(u.trim())),
+            ];
 
-            const script = document.createElement('script');
-            script.type = 'text/javascript';
-            script.src = unit.invokeUrl;
-            script.setAttribute('data-adsterra-key', unit.key);
+            const tryLoadAtIndex = (index: number) => {
+              if (context.signal.aborted) {
+                finish({ rendered: false, reason: 'Aborted' });
+                return;
+              }
 
-            script.onload = () => {
-              finish({ rendered: true });
-            };
-            script.onerror = () => {
-              finish({
-                rendered: false,
-                blocked: true,
-                reason: 'Adsterra script blocked by browser shield.',
-              });
+              const currentUrl = candidateUrls[index];
+              if (!currentUrl) {
+                finish({
+                  rendered: false,
+                  blocked: true,
+                  reason: 'Adsterra script blocked by browser shield or VPN DNS filter.',
+                });
+                return;
+              }
+
+              context.container.innerHTML = '';
+
+              // Set exact global atOptions right before appending this unit's invoke script
+              window.atOptions = {
+                key: unit.key,
+                format: unit.format,
+                height: unit.height,
+                width: unit.width,
+                params: { ...(unit.params ?? {}) },
+              };
+
+              const script = document.createElement('script');
+              script.type = 'text/javascript';
+              script.src = currentUrl;
+              script.setAttribute('data-adsterra-key', unit.key);
+
+              script.onload = () => {
+                finish({ rendered: true });
+              };
+              script.onerror = () => {
+                if (index + 1 < candidateUrls.length) {
+                  tryLoadAtIndex(index + 1);
+                } else {
+                  finish({
+                    rendered: false,
+                    blocked: true,
+                    reason:
+                      'Adsterra script blocked by browser shield or VPN DNS filter.',
+                  });
+                }
+              };
+
+              context.container.appendChild(script);
             };
 
             // Release queue if script load neither fires onload nor onerror (e.g. jsdom)
@@ -242,7 +273,7 @@ export function createAdsterraAdapter(
               { once: true },
             );
 
-            context.container.appendChild(script);
+            tryLoadAtIndex(0);
           }),
       );
     },

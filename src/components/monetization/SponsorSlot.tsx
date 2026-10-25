@@ -150,7 +150,7 @@ export function AdSlot({
               {isCompactBanner ? (
                 <span className="sponsor-unit-live__copy">
                   {scriptBlocked
-                    ? 'Sponsored banner paused by browser shield'
+                    ? 'Sponsor banner filtered by VPN DNS or ad blocker'
                     : 'Sponsored · 320×50'}
                 </span>
               ) : (
@@ -160,7 +160,7 @@ export function AdSlot({
                   </span>
                   {scriptBlocked && (
                     <span className="sponsor-unit-live__copy">
-                      Ad script blocked by browser shield on this tab.
+                      Filtered by VPN DNS or ad blocker.
                     </span>
                   )}
                 </>
