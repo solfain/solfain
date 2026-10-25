@@ -172,7 +172,8 @@ describe('Solfain Application Flows & Acceptance Criteria', () => {
     expect(screen.getByRole('heading', { name: 'Trending Now' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Recently Released' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'All-Time Popular' })).toBeInTheDocument();
-    expect(screen.getAllByLabelText('Sponsored unit')).toHaveLength(3);
+    // Clean homepage top: only mid-catalogue (320x50) and footer (300x250) slots
+    expect(screen.getAllByLabelText('Sponsored unit')).toHaveLength(2);
 
     // Strictly verify absence of any beta banner text
     expect(screen.queryByText(/SOLFAIN IS IN BETA/i)).not.toBeInTheDocument();
@@ -309,18 +310,46 @@ describe('Solfain Application Flows & Acceptance Criteria', () => {
     expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument();
   });
 
-  it('mounts live Perch Ads 300x250 script (data-space="f83vmd3w8e") and degrades gracefully on block/disable', async () => {
+  it('mounts live Adsterra 300x250 & 320x50 units in isolated iframes and degrades gracefully on block/disable', async () => {
     const { container, unmount } = render(<AdSlot placement="sidebar-rectangle" />);
 
     await waitFor(() => {
-      const script = container.querySelector('script[data-space="f83vmd3w8e"]');
-      expect(script).not.toBeNull();
+      const iframe = container.querySelector(
+        'iframe[data-adsterra-key="8031ff5e7be9985553dcdea4bbb45d96"]',
+      );
+      expect(iframe).not.toBeNull();
     });
 
-    const script = container.querySelector('script[data-space="f83vmd3w8e"]') as HTMLScriptElement;
-    expect(script.getAttribute('src')).toBe('https://www.perchads.com/embed.js');
-    expect(script.async).toBe(true);
+    const rectIframe = container.querySelector(
+      'iframe[data-adsterra-key="8031ff5e7be9985553dcdea4bbb45d96"]',
+    ) as HTMLIFrameElement;
+    expect(rectIframe.getAttribute('width')).toBe('300');
+    expect(rectIframe.getAttribute('height')).toBe('250');
+    expect(rectIframe.getAttribute('data-adsterra-src')).toBe(
+      'https://bauval.org/22/8031ff5e7be9985553dcdea4bbb45d96',
+    );
     unmount();
+
+    const { container: bannerContainer, unmount: unmountBanner } = render(
+      <AdSlot placement="watch-below-player" />,
+    );
+
+    await waitFor(() => {
+      const iframe = bannerContainer.querySelector(
+        'iframe[data-adsterra-key="6339f8aa4607b6c12e213fc4cf317df1"]',
+      );
+      expect(iframe).not.toBeNull();
+    });
+
+    const bannerIframe = bannerContainer.querySelector(
+      'iframe[data-adsterra-key="6339f8aa4607b6c12e213fc4cf317df1"]',
+    ) as HTMLIFrameElement;
+    expect(bannerIframe.getAttribute('width')).toBe('320');
+    expect(bannerIframe.getAttribute('height')).toBe('50');
+    expect(bannerIframe.getAttribute('data-adsterra-src')).toBe(
+      'https://bauval.org/22/6339f8aa4607b6c12e213fc4cf317df1',
+    );
+    unmountBanner();
 
     registerAdNetworkAdapter({
       id: 'failing-network',
@@ -331,13 +360,13 @@ describe('Solfain Application Flows & Acceptance Criteria', () => {
       },
     });
 
-    const { rerender } = render(<AdSlot placement="home-leaderboard" />);
+    const { rerender } = render(<AdSlot placement="sidebar-rectangle" />);
 
     await waitFor(() => {
       expect(screen.getByText(/blocked by browser shield/i)).toBeInTheDocument();
     });
 
-    rerender(<AdSlot placement="home-leaderboard" enabled={false} />);
+    rerender(<AdSlot placement="sidebar-rectangle" enabled={false} />);
     expect(screen.queryByLabelText('Sponsored unit')).not.toBeInTheDocument();
   });
 });

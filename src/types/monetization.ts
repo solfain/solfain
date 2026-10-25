@@ -1,8 +1,6 @@
 export type AdPlacement =
-  | 'home-top-rectangle'
-  | 'home-leaderboard'
-  | 'home-mid-rectangle'
-  | 'home-footer-banner'
+  | 'home-mid-banner'
+  | 'home-footer-rectangle'
   | 'search-top-banner'
   | 'search-bottom-rectangle'
   | 'details-inline'
@@ -19,25 +17,20 @@ export interface AdDimensions {
   mobileHeight: number;
 }
 
-export interface PerchSlotConfig {
+export interface AdsterraUnitSpec {
+  key: string;
+  format: 'iframe';
+  width: number;
+  height: number;
+  invokeUrl: string;
+  params?: Record<string, unknown>;
+}
+
+export interface AdsterraSlotConfig {
   placement: AdPlacement;
   label: string;
-  perchFormat: string;
+  unit: AdsterraUnitSpec | null;
   dimensions: AdDimensions;
-  /**
-   * Perch Ads `data-space` identifier (e.g. "f83vmd3w8e") for
-   * `<script async src="https://www.perchads.com/embed.js" data-space="..."></script>`.
-   * Leave empty to keep the slot in reserved placeholder mode.
-   */
-  desktopSpaceId: string;
-  /**
-   * Optional separate Perch Ads `data-space` ID for < 760px mobile banners (320x50).
-   */
-  mobileSpaceId?: string;
-  /**
-   * Embed script URL (defaults to "https://www.perchads.com/embed.js").
-   */
-  embedScriptUrl?: string;
 }
 
 export interface AdSlotRenderContext {
@@ -58,7 +51,7 @@ export interface AdNetworkAdapter {
   readonly name: string;
   readonly isConfigured: boolean;
   isPlacementConfigured?(placement: AdPlacement): boolean;
-  getPlacementSpaceId?(placement: AdPlacement): string;
+  getPlacementKey?(placement: AdPlacement): string;
   mountSlot(context: AdSlotRenderContext): Promise<AdRenderOutcome>;
   unmountSlot?(container: HTMLElement): void;
 }

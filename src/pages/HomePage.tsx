@@ -97,8 +97,6 @@ export function HomePage() {
       <FeaturedHero items={data.trending} />
 
       <div className="container catalogue-stack">
-        <AdSlot placement="home-top-rectangle" />
-
         {history.length > 0 && (
           <CatalogueRow
             title="Continue Watching"
@@ -149,7 +147,7 @@ export function HomePage() {
           </CatalogueRow>
         )}
 
-        <AdSlot placement="home-leaderboard" />
+        <AdSlot placement="home-mid-banner" />
 
         {recommended.length > 0 && seedTitle && (
           <CatalogueRow
@@ -186,7 +184,7 @@ export function HomePage() {
           </CatalogueRow>
         )}
 
-        <AdSlot placement="home-footer-banner" />
+        <AdSlot placement="home-footer-rectangle" />
       </div>
     </div>
   );

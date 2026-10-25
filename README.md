@@ -77,14 +77,18 @@ Solfain streams directly through **Yenime** (`https://player.yenime.net`) via a 
 2. **Episode Lists**: Because `api.yenime.net` documents an iframe player endpoint rather than a JSON episode-list API, episode counts, airing schedules (`nextAiringEpisode`), and available episode titles/thumbnails (`streamingEpisodes`) are populated from **AniList**.
 3. **Player Events & Auto-Next**: `player.yenime.net` posts `PLAYER_EVENT` messages (`play`, `pause`, `seeked`, `ended`, `timeupdate`) with `currentTime` and `duration`. Solfain validates `event.origin === 'https://player.yenime.net'` to persist playback progress in Watch History and automatically advance to the next episode when `Auto-Next` is enabled.
 
-## Monetization (Perch Ads)
+## Monetization (Adsterra)
 
-`AdSlot` (`src/components/monetization/SponsorSlot.tsx`) and `PERCH_ADS_SLOTS` (`src/services/monetization/perchConfig.ts`) integrate **Perch Ads** (`https://www.perchads.com/embed.js`):
+`AdSlot` (`src/components/monetization/SponsorSlot.tsx`) and `ADSTERRA_SLOTS` (`src/services/monetization/adsterraConfig.ts`) mount **Adsterra** `atOptions` units inside isolated same-origin iframes so multiple units can coexist on the same page without global `window.atOptions` collisions while keeping the **top of the Homepage clean**:
 
-- **Live `300×250` Medium Rectangle (`data-space="f83vmd3w8e"`)**:
-  - `home-top-rectangle` — Homepage (`/`) right below the Featured Hero
+- **`300×250` Medium Rectangle (`8031ff5e7be9985553dcdea4bbb45d96`)**:
   - `sidebar-rectangle` — Anime Details (`/anime/:id`) right-hand dossier sidebar
   - `watch-sidebar-rectangle` — Watch Page (`/watch/:id`) right-hand rail below the episode selector
   - `search-bottom-rectangle` — Browse & Search (`/search`) bottom slot
-- **Reserved `728×90` / `320×50` Leaderboard Placeholders** (ready for additional `data-space` IDs in `src/services/monetization/perchConfig.ts`):
-  - `home-leaderboard`, `home-footer-banner`, `search-top-banner`, `details-inline`, `details-bottom-banner`, `watch-below-player`, `collection-footer-banner`
+  - `home-footer-rectangle` — Homepage (`/`) footer slot below Highest Rated
+- **`320×50` Compact Banner (`6339f8aa4607b6c12e213fc4cf317df1`)**:
+  - `home-mid-banner` — Homepage (`/`) mid-catalogue slot below Seasonal lineup
+  - `search-top-banner` — Browse & Search (`/search`) filter bar banner
+  - `details-inline` & `details-bottom-banner` — Anime Details (`/anime/:id`) inline and footer strips
+  - `watch-below-player` — Watch Page (`/watch/:id`) strip separated below player & info
+  - `collection-footer-banner` — Favorites (`/favorites`) & Watch History (`/history`) footer strip

@@ -4,21 +4,19 @@ import type {
   AdPlacement,
   AdSystemSettings,
 } from '../../types/monetization';
-import { createPerchAdsAdapter, PERCH_ADS_SLOTS } from './perchConfig';
+import { ADSTERRA_SLOTS, createAdsterraAdapter } from './adsterraConfig';
 
 export const DEFAULT_AD_DIMENSIONS: Record<AdPlacement, AdDimensions> = Object.fromEntries(
-  Object.entries(PERCH_ADS_SLOTS).map(([key, config]) => [key, config.dimensions]),
+  Object.entries(ADSTERRA_SLOTS).map(([key, config]) => [key, config.dimensions]),
 ) as Record<AdPlacement, AdDimensions>;
 
-const defaultPerchAdapter: AdNetworkAdapter = createPerchAdsAdapter(PERCH_ADS_SLOTS);
+const defaultAdsterraAdapter: AdNetworkAdapter = createAdsterraAdapter(ADSTERRA_SLOTS);
 
-let activeAdAdapter: AdNetworkAdapter = defaultPerchAdapter;
+let activeAdAdapter: AdNetworkAdapter = defaultAdsterraAdapter;
 
 const defaultPlacementsEnabled: Record<AdPlacement, boolean> = {
-  'home-top-rectangle': true,
-  'home-leaderboard': true,
-  'home-mid-rectangle': true,
-  'home-footer-banner': true,
+  'home-mid-banner': true,
+  'home-footer-rectangle': true,
   'search-top-banner': true,
   'search-bottom-rectangle': true,
   'details-inline': true,
@@ -44,7 +42,7 @@ export function registerAdNetworkAdapter(adapter: AdNetworkAdapter): void {
 }
 
 export function resetAdNetworkAdapter(): void {
-  activeAdAdapter = defaultPerchAdapter;
+  activeAdAdapter = defaultAdsterraAdapter;
 }
 
 export function getAdSystemSettings(): AdSystemSettings {

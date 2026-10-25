@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { PERCH_ADS_SLOTS } from '../../services/monetization/perchConfig';
+import { ADSTERRA_SLOTS } from '../../services/monetization/adsterraConfig';
 import {
   DEFAULT_AD_DIMENSIONS,
   getAdNetworkAdapter,
@@ -15,16 +15,6 @@ export interface AdSlotProps {
   className?: string;
 }
 
-function hasInjectedWidgetNode(container: HTMLElement): boolean {
-  for (let i = 0; i < container.children.length; i += 1) {
-    const child = container.children[i];
-    if (child.tagName.toUpperCase() !== 'SCRIPT') {
-      return true;
-    }
-  }
-  return false;
-}
-
 export function AdSlot({
   placement,
   dimensions,
@@ -37,7 +27,7 @@ export function AdSlot({
     enabled ?? (settings.enabled && (settings.placements[placement] ?? true));
   const shouldReserve = reserveSpace ?? settings.reserveSpace;
 
-  const perchMeta = PERCH_ADS_SLOTS[placement];
+  const slotMeta = ADSTERRA_SLOTS[placement];
   const baseDims = DEFAULT_AD_DIMENSIONS[placement];
   const resolvedDims: AdDimensions = {
     desktopWidth: dimensions?.desktopWidth ?? baseDims.desktopWidth,
@@ -50,14 +40,13 @@ export function AdSlot({
   const isLiveSlotConfigured = adapter.isPlacementConfigured
     ? adapter.isPlacementConfigured(placement)
     : adapter.isConfigured;
-  const activeSpaceId = adapter.getPlacementSpaceId?.(placement) ?? '';
 
   const surfaceRef = useRef<HTMLDivElement | null>(null);
-  const [widgetInjected, setWidgetInjected] = useState(false);
+  const [unitLoaded, setUnitLoaded] = useState(false);
   const [scriptBlocked, setScriptBlocked] = useState(false);
 
   useEffect(() => {
-    setWidgetInjected(false);
+    setUnitLoaded(false);
     setScriptBlocked(false);
 
     if (!slotEnabled || !isLiveSlotConfigured) {
@@ -68,13 +57,6 @@ export function AdSlot({
     if (!container) {
       return;
     }
-
-    const observer = new MutationObserver(() => {
-      if (hasInjectedWidgetNode(container)) {
-        setWidgetInjected(true);
-      }
-    });
-    observer.observe(container, { childList: true, subtree: false });
 
     const currentAdapter = getAdNetworkAdapter();
     const controller = new AbortController();
@@ -90,12 +72,10 @@ export function AdSlot({
         if (controller.signal.aborted) {
           return;
         }
-        if (!outcome?.rendered) {
+        if (outcome?.rendered) {
+          setUnitLoaded(true);
+        } else {
           setScriptBlocked(Boolean(outcome?.blocked ?? true));
-          return;
-        }
-        if (hasInjectedWidgetNode(container)) {
-          setWidgetInjected(true);
         }
       })
       .catch(() => {
@@ -105,12 +85,11 @@ export function AdSlot({
       });
 
     return () => {
-      observer.disconnect();
       controller.abort();
       try {
         currentAdapter.unmountSlot?.(container);
       } catch {
-        // Ignore cleanup errors from external scripts
+        // Ignore cleanup errors from external ad frames
       }
     };
   }, [
@@ -134,9 +113,7 @@ export function AdSlot({
     '--slot-mobile-h': `${resolvedDims.mobileHeight}px`,
   } as CSSProperties;
 
-  const sameMobileDesktopSize =
-    resolvedDims.desktopWidth === resolvedDims.mobileWidth &&
-    resolvedDims.desktopHeight === resolvedDims.mobileHeight;
+  const isCompactBanner = resolvedDims.desktopHeight <= 60;
 
   return (
     <aside
@@ -146,9 +123,14 @@ export function AdSlot({
       data-slot-mode={isLiveSlotConfigured ? 'live' : 'placeholder'}
     >
       {isLiveSlotConfigured ? (
-        <div className="sponsor-unit-live" style={styleVars}>
+        <div
+          className={`sponsor-unit-live${
+            isCompactBanner ? ' sponsor-unit-live--compact' : ''
+          }`}
+          style={styleVars}
+        >
           <div className="sponsor-unit-live__caption">
-            <span>Sponsored · Perch Ads</span>
+            <span>Sponsored</span>
             <span>
               {resolvedDims.desktopWidth}×{resolvedDims.desktopHeight}
             </span>
@@ -157,20 +139,39 @@ export function AdSlot({
           <div
             className={`sponsor-unit-live__stage${
               shouldReserve ? '' : ' sponsor-unit--unreserved'
-            }${widgetInjected ? ' sponsor-unit-live__stage--filled' : ''}`}
+            }${unitLoaded ? ' sponsor-unit-live__stage--filled' : ''}`}
           >
-            {/* Isolated mount container owned purely by Perch Ads embed.js */}
-            <div ref={surfaceRef} className="sponsor-unit-live__mount" />
+            {/* Isolated Adsterra iframe mount container */}
+            <div
+              ref={surfaceRef}
+              className="sponsor-unit-live__mount"
+              style={{ opacity: scriptBlocked ? 0 : 1 }}
+            />
 
-            {/* Visible fallback shown while embed.js loads or if blocked by browser shield */}
-            {!widgetInjected && (
-              <div className="sponsor-unit-live__fallback">
-                <span className="sponsor-unit-live__badge">Perch Ads · {activeSpaceId}</span>
-                <span className="sponsor-unit-live__copy">
-                  {scriptBlocked
-                    ? 'Live Perch Ads script blocked by browser shield/ad-blocker on this tab.'
-                    : `Loading Perch Ads ${resolvedDims.desktopWidth}×${resolvedDims.desktopHeight} space…`}
-                </span>
+            {!unitLoaded && (
+              <div
+                className={`sponsor-unit-live__fallback${
+                  isCompactBanner ? ' sponsor-unit-live__fallback--compact' : ''
+                }`}
+              >
+                {isCompactBanner ? (
+                  <span className="sponsor-unit-live__copy">
+                    {scriptBlocked
+                      ? 'Sponsored banner paused by browser shield'
+                      : 'Loading sponsor banner…'}
+                  </span>
+                ) : (
+                  <>
+                    <span className="sponsor-unit-live__badge">
+                      Sponsored · {resolvedDims.desktopWidth}×{resolvedDims.desktopHeight}
+                    </span>
+                    <span className="sponsor-unit-live__copy">
+                      {scriptBlocked
+                        ? 'Adsterra banner blocked by browser shield on this tab.'
+                        : 'Loading sponsor unit…'}
+                    </span>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -182,27 +183,14 @@ export function AdSlot({
         >
           <div ref={surfaceRef} style={{ display: 'none' }} />
           <div className="sponsor-unit-box__header">
-            <span className="sponsor-unit-box__label">Sponsored · Perch Ads</span>
-            {sameMobileDesktopSize ? (
-              <span className="sponsor-unit-box__spec">
-                {resolvedDims.desktopWidth}×{resolvedDims.desktopHeight}
-              </span>
-            ) : (
-              <>
-                <span className="sponsor-unit-box__spec sponsor-unit-box__spec--desktop">
-                  {resolvedDims.desktopWidth}×{resolvedDims.desktopHeight}
-                </span>
-                <span className="sponsor-unit-box__spec sponsor-unit-box__spec--mobile">
-                  {resolvedDims.mobileWidth}×{resolvedDims.mobileHeight}
-                </span>
-              </>
-            )}
+            <span className="sponsor-unit-box__label">Sponsored</span>
+            <span className="sponsor-unit-box__spec">
+              {resolvedDims.desktopWidth}×{resolvedDims.desktopHeight}
+            </span>
           </div>
 
           <div className="sponsor-unit-box__surface">
-            <span className="sponsor-unit-box__copy">
-              Perch Ads placeholder — {perchMeta.label} ({perchMeta.perchFormat})
-            </span>
+            <span className="sponsor-unit-box__copy">{slotMeta.label}</span>
           </div>
         </div>
       )}

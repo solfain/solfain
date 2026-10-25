@@ -968,7 +968,7 @@
 }
 
 /* ==========================================================================
-   MONETIZATION UNITS (Perch Ads — SponsorSlot)
+   MONETIZATION UNITS (Adsterra — SponsorSlot)
    ========================================================================== */
 
 .sponsor-unit-row {
@@ -983,17 +983,21 @@
   max-width: var(--slot-desktop-w, 300px);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
+}
+
+.sponsor-unit-live--compact {
+  gap: 4px;
 }
 
 .sponsor-unit-live__caption {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.65rem;
+  font-size: 0.625rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .sponsor-unit-live__stage {
@@ -1001,8 +1005,8 @@
   width: 100%;
   max-width: var(--slot-desktop-w, 300px);
   min-height: var(--slot-desktop-h, 250px);
-  background-color: var(--bg-secondary);
-  border: 1px solid rgba(167, 139, 250, 0.25);
+  background-color: var(--bg-elevated);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-sm);
   overflow: hidden;
   display: flex;
@@ -1011,8 +1015,8 @@
 }
 
 .sponsor-unit-live__stage--filled {
-  border-color: rgba(255, 255, 255, 0.08);
-  background-color: var(--bg-elevated);
+  border-color: rgba(255, 255, 255, 0.06);
+  background-color: transparent;
 }
 
 .sponsor-unit-live__mount {
@@ -1028,30 +1032,35 @@
   position: absolute;
   inset: 0;
   z-index: 1;
-  padding: 18px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   text-align: center;
+}
+
+.sponsor-unit-live__fallback--compact {
+  padding: 4px 10px;
+  flex-direction: row;
 }
 
 .sponsor-unit-live__badge {
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  padding: 3px 8px;
+  font-size: 0.6875rem;
+  padding: 2px 7px;
   border-radius: 4px;
-  background-color: rgba(139, 92, 246, 0.14);
-  border: 1px solid rgba(167, 139, 250, 0.3);
-  color: var(--text-primary);
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
 }
 
 .sponsor-unit-live__copy {
-  font-size: 0.75rem;
-  line-height: 1.45;
-  color: var(--text-secondary);
-  max-width: 240px;
+  font-size: 0.71875rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+  max-width: 260px;
 }
 
 .sponsor-unit-box {
