@@ -109,7 +109,18 @@ export const ADSTERRA_SLOTS: Record<AdPlacement, AdsterraSlotConfig> = {
 
 let instanceCounter = 0;
 
-function buildAdsterraIframeDocument(unit: AdsterraUnitSpec, instanceId: string): string {
+/**
+ * Builds an isolated same-origin HTML document for an Adsterra `atOptions` unit:
+ * 1. Declares `color-scheme: dark` + `#141418` background so Chromium never paints
+ *    a solid `#FFFFFF` white canvas behind transparent iframes on a dark site.
+ * 2. Detects whether Adsterra actually filled a non-empty creative vs returned an
+ *    empty no-fill frame (which happens on sandbox/localhost domains not registered
+ *    in the Adsterra Websites dashboard).
+ */
+export function buildAdsterraIframeDocument(
+  unit: AdsterraUnitSpec,
+  instanceId: string,
+): string {
   const atOptionsJson = JSON.stringify({
     key: unit.key,
     format: unit.format,
@@ -124,6 +135,7 @@ function buildAdsterraIframeDocument(unit: AdsterraUnitSpec, instanceId: string)
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<meta name="color-scheme" content="dark" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <style>
   html, body {
@@ -132,21 +144,94 @@ function buildAdsterraIframeDocument(unit: AdsterraUnitSpec, instanceId: string)
     width: ${unit.width}px;
     height: ${unit.height}px;
     overflow: hidden;
-    background: transparent;
+    color-scheme: dark;
+    background-color: #141418;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  iframe {
+    border: 0;
+    color-scheme: dark;
+    background-color: #141418;
   }
 </style>
 </head>
 <body>
 <script>
-  atOptions = ${atOptionsJson};
+  var atOptions = ${atOptionsJson};
+  (function() {
+    var reported = false;
+    function notify(ok, filled) {
+      if (reported && filled) return;
+      if (filled) reported = true;
+      try {
+        parent.postMessage({
+          type: 'SOLFAIN_AD_STATUS',
+          id: '${safeInstanceId}',
+          ok: ok,
+          filled: !!filled
+        }, '*');
+      } catch (e) {}
+    }
+
+    function checkCreativeFilled() {
+      if (reported || typeof document === 'undefined' || !document || !document.body) return;
+      var mediaEl = document.querySelector('body img, body a, body canvas, body video');
+      if (mediaEl) {
+        notify(true, true);
+        return;
+      }
+      var frames = document.querySelectorAll('body iframe');
+      for (var i = 0; i < frames.length; i++) {
+        var f = frames[i];
+        var src = (f.getAttribute('src') || '').trim();
+        if (src && src !== 'about:blank' && src.indexOf('javascript:') !== 0) {
+          notify(true, true);
+          return;
+        }
+        try {
+          var fDoc = f.contentDocument || (f.contentWindow && f.contentWindow.document);
+          if (!fDoc) {
+            // Cross-origin frame navigated to creative origin
+            notify(true, true);
+            return;
+          }
+          if (fDoc.body && fDoc.body.innerHTML.replace(/\\s+/g, '').length > 0) {
+            notify(true, true);
+            return;
+          }
+        } catch (err) {
+          // SecurityError means cross-origin ad frame loaded a real creative
+          notify(true, true);
+          return;
+        }
+      }
+    }
+
+    var obs = new MutationObserver(function() {
+      checkCreativeFilled();
+      setTimeout(checkCreativeFilled, 250);
+      setTimeout(checkCreativeFilled, 900);
+    });
+    obs.observe(document.body, { childList: true, subtree: true, attributes: true });
+
+    window.__onAdsterraLoad = function() {
+      checkCreativeFilled();
+      setTimeout(function() {
+        checkCreativeFilled();
+        if (!reported) notify(true, false);
+      }, 1600);
+    };
+    window.__onAdsterraError = function() {
+      notify(false, false);
+    };
+  })();
 </script>
 <script
   src="${safeInvokeUrl}"
-  onload="try{parent.postMessage({type:'SOLFAIN_AD_STATUS',id:'${safeInstanceId}',ok:true},'*')}catch(e){}"
-  onerror="try{parent.postMessage({type:'SOLFAIN_AD_STATUS',id:'${safeInstanceId}',ok:false},'*')}catch(e){}"
+  onload="window.__onAdsterraLoad && window.__onAdsterraLoad()"
+  onerror="window.__onAdsterraError && window.__onAdsterraError()"
 ></script>
 </body>
 </html>`;
@@ -184,10 +269,13 @@ export function createAdsterraAdapter(
         const instanceId = `adsterra-${context.placement}-${instanceCounter}`;
         let settled = false;
 
-        const finish = (outcome: { rendered: boolean; blocked?: boolean; reason?: string }) => {
+        const finish = (outcome: {
+          rendered: boolean;
+          blocked?: boolean;
+          reason?: string;
+        }) => {
           if (settled) return;
           settled = true;
-          window.removeEventListener('message', onMessage);
           window.clearTimeout(fallbackTimer);
           resolve(outcome);
         };
@@ -202,28 +290,40 @@ export function createAdsterraAdapter(
           ) {
             return;
           }
-          if (payload.ok) {
-            finish({ rendered: true });
-          } else {
+          if (!payload.ok) {
+            window.removeEventListener('message', onMessage);
             finish({
               rendered: false,
               blocked: true,
-              reason: 'Adsterra invoke script was blocked by browser shield.',
+              reason: 'Adsterra invoke script blocked by browser shield.',
+            });
+            return;
+          }
+          if (payload.filled) {
+            window.removeEventListener('message', onMessage);
+            context.container.setAttribute('data-ad-filled', 'true');
+            finish({ rendered: true });
+          } else {
+            // Script ran cleanly, but Adsterra returned no-fill for this hostname (e.g. sandbox/localhost)
+            finish({
+              rendered: false,
+              blocked: false,
+              reason: 'No fill for current hostname.',
             });
           }
         };
 
         window.addEventListener('message', onMessage);
 
-        // Defer by one short tick so React 19 StrictMode's initial throwaway
-        // mount/cleanup cancels cleanly before writing the ad iframe.
         const mountTimer = window.setTimeout(() => {
           if (context.signal.aborted) {
+            window.removeEventListener('message', onMessage);
             finish({ rendered: false, reason: 'Aborted' });
             return;
           }
 
           context.container.innerHTML = '';
+          context.container.setAttribute('data-ad-filled', 'false');
 
           const iframe = document.createElement('iframe');
           iframe.title = `${slot.label} (${unit.width}x${unit.height})`;
@@ -231,7 +331,6 @@ export function createAdsterraAdapter(
           iframe.height = String(unit.height);
           iframe.scrolling = 'no';
           iframe.setAttribute('frameborder', '0');
-          iframe.setAttribute('allowtransparency', 'true');
           iframe.setAttribute('data-adsterra-key', unit.key);
           iframe.setAttribute('data-adsterra-src', unit.invokeUrl);
           iframe.style.width = `${unit.width}px`;
@@ -239,6 +338,8 @@ export function createAdsterraAdapter(
           iframe.style.border = '0';
           iframe.style.overflow = 'hidden';
           iframe.style.display = 'block';
+          iframe.style.colorScheme = 'dark';
+          iframe.style.backgroundColor = '#141418';
 
           // Must append iframe to DOM before accessing contentDocument
           context.container.appendChild(iframe);
@@ -250,22 +351,28 @@ export function createAdsterraAdapter(
               doc.write(buildAdsterraIframeDocument(unit, instanceId));
               doc.close();
             } else {
+              window.removeEventListener('message', onMessage);
               finish({ rendered: false, reason: 'Iframe document unavailable.' });
             }
           } catch {
+            window.removeEventListener('message', onMessage);
             finish({ rendered: false, reason: 'Failed to write Adsterra frame.' });
           }
         }, 20);
 
-        // Fallback resolution for test environments (e.g. jsdom) or silent stalls
         const fallbackTimer = window.setTimeout(() => {
-          finish({ rendered: true });
-        }, 2500);
+          finish({
+            rendered: false,
+            blocked: false,
+            reason: 'No fill within timeout.',
+          });
+        }, 2600);
 
         context.signal.addEventListener(
           'abort',
           () => {
             window.clearTimeout(mountTimer);
+            window.removeEventListener('message', onMessage);
             finish({ rendered: false, reason: 'Aborted' });
           },
           { once: true },

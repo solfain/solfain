@@ -42,12 +42,14 @@ export function AdSlot({
     : adapter.isConfigured;
 
   const surfaceRef = useRef<HTMLDivElement | null>(null);
-  const [unitLoaded, setUnitLoaded] = useState(false);
-  const [scriptBlocked, setScriptBlocked] = useState(false);
+  const [creativeFilled, setCreativeFilled] = useState(false);
+  const [statusState, setStatusState] = useState<'loading' | 'nofill' | 'blocked'>(
+    'loading',
+  );
 
   useEffect(() => {
-    setUnitLoaded(false);
-    setScriptBlocked(false);
+    setCreativeFilled(false);
+    setStatusState('loading');
 
     if (!slotEnabled || !isLiveSlotConfigured) {
       return;
@@ -57,6 +59,17 @@ export function AdSlot({
     if (!container) {
       return;
     }
+
+    // Also watch data-ad-filled in case a late creative fill arrives after initial check
+    const attrObserver = new MutationObserver(() => {
+      if (container.getAttribute('data-ad-filled') === 'true') {
+        setCreativeFilled(true);
+      }
+    });
+    attrObserver.observe(container, {
+      attributes: true,
+      attributeFilter: ['data-ad-filled'],
+    });
 
     const currentAdapter = getAdNetworkAdapter();
     const controller = new AbortController();
@@ -73,18 +86,21 @@ export function AdSlot({
           return;
         }
         if (outcome?.rendered) {
-          setUnitLoaded(true);
+          setCreativeFilled(true);
+        } else if (outcome?.blocked) {
+          setStatusState('blocked');
         } else {
-          setScriptBlocked(Boolean(outcome?.blocked ?? true));
+          setStatusState('nofill');
         }
       })
       .catch(() => {
         if (!controller.signal.aborted) {
-          setScriptBlocked(true);
+          setStatusState('blocked');
         }
       });
 
     return () => {
+      attrObserver.disconnect();
       controller.abort();
       try {
         currentAdapter.unmountSlot?.(container);
@@ -139,16 +155,19 @@ export function AdSlot({
           <div
             className={`sponsor-unit-live__stage${
               shouldReserve ? '' : ' sponsor-unit--unreserved'
-            }${unitLoaded ? ' sponsor-unit-live__stage--filled' : ''}`}
+            }${creativeFilled ? ' sponsor-unit-live__stage--filled' : ''}`}
           >
-            {/* Isolated Adsterra iframe mount container */}
+            {/* Isolated Adsterra iframe mount container: stays invisible until a non-empty creative fills */}
             <div
               ref={surfaceRef}
               className="sponsor-unit-live__mount"
-              style={{ opacity: scriptBlocked ? 0 : 1 }}
+              style={{
+                opacity: creativeFilled ? 1 : 0,
+                pointerEvents: creativeFilled ? 'auto' : 'none',
+              }}
             />
 
-            {!unitLoaded && (
+            {!creativeFilled && (
               <div
                 className={`sponsor-unit-live__fallback${
                   isCompactBanner ? ' sponsor-unit-live__fallback--compact' : ''
@@ -156,19 +175,23 @@ export function AdSlot({
               >
                 {isCompactBanner ? (
                   <span className="sponsor-unit-live__copy">
-                    {scriptBlocked
-                      ? 'Sponsored banner paused by browser shield'
-                      : 'Loading sponsor banner…'}
+                    {statusState === 'blocked'
+                      ? 'Adsterra 320×50 paused by browser shield'
+                      : statusState === 'nofill'
+                        ? 'Adsterra 320×50 connected · serves on approved domain'
+                        : 'Loading Adsterra 320×50…'}
                   </span>
                 ) : (
                   <>
                     <span className="sponsor-unit-live__badge">
-                      Sponsored · {resolvedDims.desktopWidth}×{resolvedDims.desktopHeight}
+                      Adsterra · {resolvedDims.desktopWidth}×{resolvedDims.desktopHeight}
                     </span>
                     <span className="sponsor-unit-live__copy">
-                      {scriptBlocked
-                        ? 'Adsterra banner blocked by browser shield on this tab.'
-                        : 'Loading sponsor unit…'}
+                      {statusState === 'blocked'
+                        ? 'Adsterra script blocked by browser shield on this tab.'
+                        : statusState === 'nofill'
+                          ? 'Unit connected — live ads serve on your registered Adsterra domain.'
+                          : 'Loading Adsterra unit…'}
                     </span>
                   </>
                 )}
