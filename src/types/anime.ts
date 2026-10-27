@@ -134,6 +134,36 @@ export interface MediaRelationItem {
   node: AnimeSummary;
 }
 
+export interface VoiceActorNode {
+  id: number;
+  name: {
+    full: string | null;
+    native: string | null;
+  };
+  languageV2: string | null;
+  image: {
+    large: string | null;
+    medium: string | null;
+  } | null;
+}
+
+export interface CharacterEdge {
+  id: number;
+  role: 'MAIN' | 'SUPPORTING' | 'BACKGROUND' | string | null;
+  node: {
+    id: number;
+    name: {
+      full: string | null;
+      native: string | null;
+    };
+    image: {
+      large: string | null;
+      medium: string | null;
+    } | null;
+  };
+  voiceActors?: VoiceActorNode[];
+}
+
 export interface AnimeDetails extends AnimeSummary {
   description: string | null;
   endDate: FuzzyDate | null;
@@ -144,6 +174,9 @@ export interface AnimeDetails extends AnimeSummary {
   trailer: MediaTrailer | null;
   streamingEpisodes: MediaStreamingEpisode[];
   externalLinks: MediaExternalLink[];
+  characters?: {
+    edges: CharacterEdge[];
+  };
   relations: {
     edges: MediaRelationItem[];
   };
@@ -154,6 +187,16 @@ export interface AnimeDetails extends AnimeSummary {
       mediaRecommendation: AnimeSummary | null;
     }>;
   };
+}
+
+export interface StudioCatalogueData {
+  id: number;
+  name: string;
+  isAnimationStudio: boolean;
+  siteUrl: string | null;
+  favourites: number | null;
+  pageInfo: PageInfo;
+  media: AnimeSummary[];
 }
 
 export interface RecentAiringItem {

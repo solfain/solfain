@@ -2,6 +2,10 @@ import { useState, type MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Bookmark, Film, Star } from 'lucide-react';
 import { useFavorites } from '../../services/storage/favoritesStore';
+import {
+  useWatchlist,
+  WATCHLIST_STATUS_LABELS,
+} from '../../services/storage/watchlistStore';
 import type { AnimeSummary } from '../../types/anime';
 import type { FavoriteAnimeItem } from '../../types/storage';
 import {
@@ -27,8 +31,10 @@ function isFavoriteRecord(
 export function AnimeCard({ anime, rank, eager = false }: AnimeCardProps) {
   const [imageError, setImageError] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { getEntry } = useWatchlist();
 
   const favorited = isFavorite(anime.id);
+  const watchlistEntry = getEntry(anime.id);
 
   const title = isFavoriteRecord(anime) ? anime.title : getDisplayTitle(anime.title);
   const rawCoverUrl = isFavoriteRecord(anime)
@@ -81,6 +87,12 @@ export function AnimeCard({ anime, rank, eager = false }: AnimeCardProps) {
 
           {typeof rank === 'number' && (
             <span className="anime-card__rank">#{String(rank).padStart(2, '0')}</span>
+          )}
+
+          {watchlistEntry && typeof rank !== 'number' && (
+            <span className="anime-card__status-tag">
+              {WATCHLIST_STATUS_LABELS[watchlistEntry.status]}
+            </span>
           )}
         </div>
 

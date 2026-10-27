@@ -186,6 +186,35 @@ export const ANIME_DETAILS_QUERY = `
         icon
         isDisabled
       }
+      characters(page: 1, perPage: 12, sort: [ROLE, RELEVANCE, ID]) {
+        edges {
+          id
+          role
+          node {
+            id
+            name {
+              full
+              native
+            }
+            image {
+              large
+              medium
+            }
+          }
+          voiceActors(sort: [RELEVANCE, ID]) {
+            id
+            name {
+              full
+              native
+            }
+            languageV2
+            image {
+              large
+              medium
+            }
+          }
+        }
+      }
       relations {
         edges {
           id
@@ -229,6 +258,29 @@ export const WEEKLY_SCHEDULE_QUERY = `
         airingAt
         timeUntilAiring
         media {
+          ...MediaCardFields
+        }
+      }
+    }
+  }
+`;
+
+export const STUDIO_CATALOGUE_QUERY = `
+  ${MEDIA_CARD_FRAGMENT}
+  query StudioCatalogue($id: Int!, $page: Int = 1, $perPage: Int = 24, $sort: [MediaSort] = [POPULARITY_DESC]) {
+    Studio(id: $id) {
+      id
+      name
+      isAnimationStudio
+      siteUrl
+      favourites
+      media(page: $page, perPage: $perPage, sort: $sort, isMain: true) {
+        pageInfo {
+          currentPage
+          hasNextPage
+          perPage
+        }
+        nodes {
           ...MediaCardFields
         }
       }

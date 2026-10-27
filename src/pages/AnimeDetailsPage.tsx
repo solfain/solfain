@@ -1,9 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Bookmark, ExternalLink, Film, Play, Star, Video, X } from 'lucide-react';
+import {
+  Bookmark,
+  Check,
+  ExternalLink,
+  Film,
+  Play,
+  Share2,
+  Star,
+  Video,
+  X,
+} from 'lucide-react';
 import { AdSlot } from '../components/monetization/SponsorSlot';
+import { AiringCountdownBanner } from '../components/anime/AiringCountdownBanner';
 import { AnimeCard } from '../components/anime/AnimeCard';
+import { CastSection } from '../components/anime/CastSection';
 import { EpisodeList } from '../components/anime/EpisodeList';
+import { WatchlistStatusSelect } from '../components/storage/WatchlistStatusSelect';
 import { ErrorState } from '../components/ui/StateFeedback';
 import { getAnimeDetails } from '../services/anilist/anilistService';
 import { getVideoProvider } from '../services/providers';
@@ -18,7 +31,7 @@ import {
   formatScore,
   formatSeasonName,
   getDisplayTitle,
-  getMainStudioName,
+  getMainStudioInfo,
   getReleaseYear,
 } from '../utils/format';
 import {
@@ -37,6 +50,7 @@ export function AnimeDetailsPage() {
   const [bannerError, setBannerError] = useState(false);
   const [posterError, setPosterError] = useState(false);
   const [trailerOpen, setTrailerOpen] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const { isFavorite, toggleFavorite } = useFavorites();
   const { getEntryForAnime } = useWatchHistory();
@@ -156,7 +170,8 @@ export function AnimeDetailsPage() {
   const year = anime ? getReleaseYear(anime) : null;
   const seasonLabel = anime ? formatSeasonName(anime.season) : null;
   const scoreLabel = anime ? formatScore(anime.averageScore) : null;
-  const studioName = anime ? getMainStudioName(anime) : null;
+  const studioInfo = anime ? getMainStudioInfo(anime) : null;
+  const studioName = studioInfo?.name ?? null;
 
   const favorited = anime ? isFavorite(anime.id) : false;
   const historyEntry = anime ? getEntryForAnime(anime.id) : null;
@@ -260,7 +275,14 @@ export function AnimeDetailsPage() {
                 {anime.episodes && (
                   <span className="details-meta-item tabular">{anime.episodes} Episodes</span>
                 )}
-                {studioName && <span className="details-meta-item">{studioName}</span>}
+                {studioInfo && (
+                  <Link
+                    to={`/studio/${studioInfo.id}`}
+                    className="details-meta-item details-meta-link"
+                  >
+                    {studioInfo.name}
+                  </Link>
+                )}
               </div>
 
               {anime.genres.length > 0 && (
@@ -312,6 +334,8 @@ export function AnimeDetailsPage() {
                   <span>{favorited ? 'In Favorites' : 'Add to Favorites'}</span>
                 </button>
 
+                <WatchlistStatusSelect anime={anime} />
+
                 {trailerEmbedUrl && (
                   <button
                     type="button"
@@ -322,6 +346,27 @@ export function AnimeDetailsPage() {
                     <span>Trailer</span>
                   </button>
                 )}
+
+                <button
+                  type="button"
+                  className="btn btn--ghost"
+                  onClick={() => {
+                    void navigator.clipboard
+                      ?.writeText(window.location.href)
+                      .then(() => {
+                        setLinkCopied(true);
+                        window.setTimeout(() => setLinkCopied(false), 2000);
+                      })
+                      .catch(() => {});
+                  }}
+                >
+                  {linkCopied ? (
+                    <Check size={15} aria-hidden="true" />
+                  ) : (
+                    <Share2 size={15} aria-hidden="true" />
+                  )}
+                  <span>{linkCopied ? 'Copied' : 'Share'}</span>
+                </button>
               </div>
             </div>
           </section>
@@ -329,6 +374,10 @@ export function AnimeDetailsPage() {
 
         <div className="details-layout">
           <div className="details-main">
+            {!isInitialLoading && anime.nextAiringEpisode && (
+              <AiringCountdownBanner nextAiring={anime.nextAiringEpisode} />
+            )}
+
             {isInitialLoading ? (
               <div className="skeleton-block" style={{ height: '104px', width: '100%' }} />
             ) : (
@@ -374,6 +423,10 @@ export function AnimeDetailsPage() {
                     audio={resumeAudio}
                   />
                 </section>
+
+                {anime.characters && anime.characters.edges.length > 0 && (
+                  <CastSection characters={anime.characters.edges} />
+                )}
 
                 {anime.relations.edges.length > 0 && (
                   <section aria-labelledby="relations-heading">
@@ -505,10 +558,17 @@ export function AnimeDetailsPage() {
                       <dd className="tabular">{scoreLabel}</dd>
                     </div>
                   )}
-                  {studioName && (
+                  {studioInfo && (
                     <div className="dossier-row">
                       <dt>Studio</dt>
-                      <dd>{studioName}</dd>
+                      <dd>
+                        <Link
+                          to={`/studio/${studioInfo.id}`}
+                          className="details-meta-link"
+                        >
+                          {studioName}
+                        </Link>
+                      </dd>
                     </div>
                   )}
                   {anime.source && (

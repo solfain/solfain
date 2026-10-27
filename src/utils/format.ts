@@ -195,3 +195,14 @@ export function getMainStudioName(anime: AnimeSummary): string | null {
   const main = edges.find((edge) => edge.isMain && edge.node?.name);
   return main?.node.name ?? edges[0]?.node?.name ?? null;
 }
+
+export function getMainStudioInfo(
+  anime: AnimeSummary,
+): { id: number; name: string } | null {
+  const edges = anime.studios?.edges;
+  if (!edges || edges.length === 0) return null;
+  const main = edges.find((edge) => edge.isMain && edge.node?.id && edge.node?.name);
+  const picked = main?.node ?? edges[0]?.node;
+  if (!picked || !picked.id || !picked.name) return null;
+  return { id: picked.id, name: picked.name };
+}

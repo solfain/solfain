@@ -90,6 +90,24 @@ export const ADSTERRA_SLOTS: Record<AdPlacement, AdsterraSlotConfig> = {
     unit: ADSTERRA_UNIT_300X250,
     dimensions: DIMS_300X250,
   },
+  'seasons-top-banner': {
+    placement: 'seasons-top-banner',
+    label: 'Seasonal Archive Banner',
+    unit: ADSTERRA_UNIT_320X50,
+    dimensions: DIMS_320X50,
+  },
+  'seasons-bottom-rectangle': {
+    placement: 'seasons-bottom-rectangle',
+    label: 'Seasonal Archive Rectangle',
+    unit: ADSTERRA_UNIT_300X250,
+    dimensions: DIMS_300X250,
+  },
+  'studio-bottom-rectangle': {
+    placement: 'studio-bottom-rectangle',
+    label: 'Studio Catalogue Rectangle',
+    unit: ADSTERRA_UNIT_300X250,
+    dimensions: DIMS_300X250,
+  },
   'details-inline': {
     placement: 'details-inline',
     label: 'Details Inline Banner',

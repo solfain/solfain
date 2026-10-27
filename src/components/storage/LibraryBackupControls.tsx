@@ -53,16 +53,30 @@ export function LibraryBackupControls({ hasEntries = true }: LibraryBackupContro
           `${summary.importedFavorites} favorite${summary.importedFavorites === 1 ? '' : 's'}`,
         );
       }
+      if (summary.importedWatchlist > 0) {
+        parts.push(
+          `${summary.importedWatchlist} watchlist item${
+            summary.importedWatchlist === 1 ? '' : 's'
+          }`,
+        );
+      }
       if (summary.importedHistory > 0) {
         parts.push(
           `${summary.importedHistory} history entr${summary.importedHistory === 1 ? 'y' : 'ies'}`,
+        );
+      }
+      if (summary.importedWatchedSeries > 0) {
+        parts.push(
+          `${summary.importedWatchedSeries} episode progress log${
+            summary.importedWatchedSeries === 1 ? '' : 's'
+          }`,
         );
       }
       setFeedback({
         tone: 'ok',
         text:
           parts.length > 0
-            ? `Imported ${parts.join(' and ')}.`
+            ? `Imported ${parts.join(', ')}.`
             : 'Backup verified — all entries are already up to date.',
       });
     } catch (err) {

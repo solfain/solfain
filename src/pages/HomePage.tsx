@@ -184,7 +184,8 @@ export function HomePage() {
               <CatalogueRow
                 title={`${seasonLabel} Season`}
                 subtitle="Current seasonal lineup"
-                viewAllHref={`/search?season=${data.seasonInfo.season}&year=${data.seasonInfo.year}`}
+                viewAllHref={`/seasons?season=${data.seasonInfo.season}&year=${data.seasonInfo.year}`}
+                viewAllLabel="Explore Season"
               >
                 {data.seasonal.map((anime) => (
                   <AnimeCard key={anime.id} anime={anime} />

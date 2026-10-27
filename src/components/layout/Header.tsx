@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, Search, X } from 'lucide-react';
+import { Menu, Search, Terminal, X } from 'lucide-react';
+import { CommandPalette } from './CommandPalette';
 import { searchAnime } from '../../services/anilist/anilistService';
 import { useFavorites } from '../../services/storage/favoritesStore';
 import { useWatchHistory } from '../../services/storage/historyStore';
+import { useWatchlist } from '../../services/storage/watchlistStore';
 import type { AnimeSummary } from '../../types/anime';
 import { useDebouncedValue } from '../../utils/debounce';
 import { formatMediaFormat, getDisplayTitle, getReleaseYear } from '../../utils/format';
@@ -29,6 +31,7 @@ export function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const { favorites } = useFavorites();
+  const { watchlist } = useWatchlist();
   const { history } = useWatchHistory();
 
   const [quickQuery, setQuickQuery] = useState('');
@@ -37,6 +40,14 @@ export function Header() {
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileQuery, setMobileQuery] = useState('');
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  const savedLibraryCount = useMemo(() => {
+    const ids = new Set<number>();
+    favorites.forEach((f) => ids.add(f.id));
+    watchlist.forEach((w) => ids.add(w.id));
+    return ids.size;
+  }, [favorites, watchlist]);
 
   const debouncedQuery = useDebouncedValue(quickQuery.trim(), 360);
   const searchWrapRef = useRef<HTMLDivElement | null>(null);
@@ -49,8 +60,15 @@ export function Header() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setDropdownOpen(false);
+        setPaletteOpen((prev) => !prev);
+        return;
+      }
       if (
         event.key === '/' &&
+        !paletteOpen &&
         document.activeElement?.tagName !== 'INPUT' &&
         document.activeElement?.tagName !== 'TEXTAREA' &&
         document.activeElement?.tagName !== 'SELECT'
@@ -64,7 +82,7 @@ export function Header() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [paletteOpen]);
 
   useEffect(() => {
     const onClickOutside = (event: MouseEvent) => {
@@ -149,6 +167,14 @@ export function Header() {
               Browse
             </NavLink>
             <NavLink
+              to="/seasons"
+              className={({ isActive }) =>
+                `primary-nav__link${isActive ? ' primary-nav__link--active' : ''}`
+              }
+            >
+              Seasons
+            </NavLink>
+            <NavLink
               to="/schedule"
               className={({ isActive }) =>
                 `primary-nav__link${isActive ? ' primary-nav__link--active' : ''}`
@@ -163,7 +189,7 @@ export function Header() {
               }
             >
               <span>Favorites</span>
-              {favorites.length > 0 && <span className="nav-count">{favorites.length}</span>}
+              {savedLibraryCount > 0 && <span className="nav-count">{savedLibraryCount}</span>}
             </NavLink>
             <NavLink
               to="/history"
@@ -251,6 +277,17 @@ export function Header() {
             )}
           </div>
 
+          <button
+            type="button"
+            className="header-cmd-btn"
+            aria-label="Open command palette (Ctrl+K)"
+            title="Command Palette (Ctrl+K)"
+            onClick={() => setPaletteOpen(true)}
+          >
+            <Terminal size={13} aria-hidden="true" />
+            <span className="header-cmd-btn__kbd">⌘K</span>
+          </button>
+
           <Link
             to="/search"
             className="mobile-icon-btn"
@@ -306,6 +343,14 @@ export function Header() {
               <span>Browse</span>
             </NavLink>
             <NavLink
+              to="/seasons"
+              className={({ isActive }) =>
+                `mobile-drawer__link${isActive ? ' mobile-drawer__link--active' : ''}`
+              }
+            >
+              <span>Seasons</span>
+            </NavLink>
+            <NavLink
               to="/schedule"
               className={({ isActive }) =>
                 `mobile-drawer__link${isActive ? ' mobile-drawer__link--active' : ''}`
@@ -319,8 +364,8 @@ export function Header() {
                 `mobile-drawer__link${isActive ? ' mobile-drawer__link--active' : ''}`
               }
             >
-              <span>Favorites</span>
-              {favorites.length > 0 && <span className="nav-count">{favorites.length}</span>}
+              <span>Favorites & Watchlist</span>
+              {savedLibraryCount > 0 && <span className="nav-count">{savedLibraryCount}</span>}
             </NavLink>
             <NavLink
               to="/history"
@@ -334,6 +379,8 @@ export function Header() {
           </nav>
         </div>
       )}
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </header>
   );
 }

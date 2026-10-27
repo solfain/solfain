@@ -2325,3 +2325,758 @@ a.relation-card:hover {
   }
 }
 
+/* ==========================================================================
+   WATCHLIST TRACKER, CAST SECTION, COMMAND PALETTE, SEASONS & CINEMA MODE
+   ========================================================================== */
+
+.details-meta-link {
+  color: var(--accent-hover);
+  text-decoration: underline;
+  text-decoration-color: rgba(167, 139, 250, 0.35);
+  text-underline-offset: 3px;
+}
+
+.details-meta-link:hover {
+  color: var(--text-primary);
+  text-decoration-color: var(--accent-hover);
+}
+
+/* Anime Card Watchlist Status Badge */
+.anime-card__status-tag {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
+  background-color: rgba(11, 11, 13, 0.88);
+  border: 1px solid var(--border-default);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  pointer-events: none;
+}
+
+/* Watchlist Status Select (Details & Watch Page) */
+.watchlist-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.watchlist-select-wrap__icon {
+  position: absolute;
+  left: 11px;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.watchlist-select {
+  height: 40px;
+  padding: 0 12px 0 33px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.watchlist-select option {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.watchlist-select-wrap--active .watchlist-select {
+  background-color: var(--accent-subtle);
+  border-color: var(--accent-border);
+  color: var(--text-primary);
+}
+
+.watchlist-select-wrap--active .watchlist-select-wrap__icon {
+  color: var(--accent-hover);
+}
+
+.watchlist-select-wrap--compact .watchlist-select {
+  height: 34px;
+  font-size: 0.8125rem;
+  padding-left: 30px;
+}
+
+.watchlist-select-wrap--compact .watchlist-select-wrap__icon {
+  left: 9px;
+}
+
+/* Library Tabs & Watchlist Rows (/favorites) */
+.library-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.library-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.library-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+
+.library-tab:hover {
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.library-tab--active {
+  background-color: var(--accent-subtle);
+  border-color: var(--accent-border);
+  color: var(--text-primary);
+}
+
+.library-tab__count {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.library-tab--active .library-tab__count {
+  color: var(--accent-hover);
+}
+
+.watchlist-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.watchlist-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+}
+
+.watchlist-row__media {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 1;
+}
+
+.watchlist-row__poster {
+  width: 48px;
+  height: 68px;
+  border-radius: var(--radius-xs);
+  object-fit: cover;
+  background-color: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.watchlist-row__poster--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.watchlist-row__info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.watchlist-row__title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.watchlist-row__media:hover .watchlist-row__title {
+  color: var(--accent-hover);
+}
+
+.watchlist-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.78125rem;
+  color: var(--text-muted);
+}
+
+.watchlist-row__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.watchlist-row__select {
+  width: auto;
+  min-width: 132px;
+  height: 34px;
+  font-size: 0.8125rem;
+}
+
+.watchlist-row__score {
+  width: auto;
+  min-width: 96px;
+  height: 34px;
+  font-size: 0.8125rem;
+}
+
+.watchlist-ep-stepper {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  padding: 0 4px;
+  gap: 4px;
+}
+
+.watchlist-ep-stepper__btn {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
+  color: var(--text-secondary);
+}
+
+.watchlist-ep-stepper__btn:hover:not(:disabled) {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.watchlist-ep-stepper__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.watchlist-ep-stepper__label {
+  min-width: 54px;
+  text-align: center;
+  font-size: 0.78125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+@media (max-width: 860px) {
+  .watchlist-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .watchlist-row__controls {
+    justify-content: flex-start;
+  }
+}
+
+/* Episode Watched Shell & Checkmarks */
+.episode-watched-summary {
+  font-size: 0.78125rem;
+  color: var(--text-secondary);
+}
+
+.episode-item-shell {
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  min-width: 0;
+  transition: background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.episode-item-shell:hover {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-default);
+}
+
+.episode-item-shell--active {
+  background-color: var(--accent-subtle);
+  border-color: var(--accent-border);
+}
+
+.episode-item-shell--watched .episode-item__title {
+  color: var(--text-secondary);
+}
+
+.episode-item__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 12px;
+  text-align: left;
+}
+
+.episode-item-shell--active .episode-item__num {
+  color: var(--accent-hover);
+}
+
+.episode-item__check {
+  width: 34px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  transition: color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+
+.episode-item__check:hover {
+  color: var(--text-primary);
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.episode-item__check--watched {
+  color: var(--accent-hover);
+}
+
+/* Characters & Voice Cast Section */
+.cast-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cast-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  min-width: 0;
+}
+
+.cast-card__side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.cast-card__side--right {
+  justify-content: flex-end;
+}
+
+.cast-card__avatar {
+  width: 44px;
+  height: 58px;
+  border-radius: var(--radius-xs);
+  object-fit: cover;
+  background-color: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.cast-card__avatar--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.cast-card__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cast-card__text--right {
+  text-align: right;
+}
+
+.cast-card__name {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cast-card__sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 720px) {
+  .cast-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Live Airing Countdown Banner */
+.airing-countdown-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--accent-border);
+  font-size: 0.84375rem;
+  color: var(--text-secondary);
+}
+
+.airing-countdown-bar__main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.airing-countdown-bar__icon {
+  color: var(--accent-hover);
+}
+
+.airing-countdown-bar__main strong {
+  color: var(--text-primary);
+}
+
+.airing-countdown-bar__timer {
+  color: var(--accent-hover) !important;
+}
+
+.airing-countdown-bar__date {
+  font-size: 0.78125rem;
+  color: var(--text-muted);
+}
+
+.airing-countdown-bar__link {
+  font-size: 0.78125rem;
+  font-weight: 500;
+  color: var(--accent-hover);
+}
+
+.airing-countdown-bar__link:hover {
+  text-decoration: underline;
+}
+
+/* Seasonal Archive Controls (/seasons) */
+.seasons-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.seasons-quarter-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.seasons-quarter-tab {
+  height: 36px;
+  padding: 0 15px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.84375rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.seasons-quarter-tab:hover {
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.seasons-quarter-tab--active {
+  background-color: var(--accent-subtle);
+  border-color: var(--accent-border);
+  color: var(--text-primary);
+}
+
+.seasons-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Cinema Dimmer & Keyboard Shortcuts Dialog */
+.cinema-dimmer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background-color: rgba(3, 3, 5, 0.92);
+  cursor: pointer;
+}
+
+.player-frame--cinema {
+  position: relative;
+  z-index: 65;
+  border-color: var(--border-default);
+}
+
+.watch-controls-bar--cinema {
+  position: relative;
+  z-index: 65;
+}
+
+.shortcuts-modal {
+  width: 100%;
+  max-width: 420px;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.72);
+}
+
+.shortcuts-modal__body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.84375rem;
+  color: var(--text-secondary);
+}
+
+.shortcut-kbd {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+}
+
+/* Header Command Button & Command Palette (Ctrl+K) */
+.header-cmd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 9px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  transition: border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.header-cmd-btn:hover {
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.header-cmd-btn__kbd {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 960px) {
+  .header-cmd-btn {
+    display: none;
+  }
+}
+
+.cmd-palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background-color: rgba(5, 5, 8, 0.82);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 10vh 16px 24px;
+}
+
+.cmd-palette {
+  width: 100%;
+  max-width: 580px;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.72);
+}
+
+.cmd-palette__input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.cmd-palette__search-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.cmd-palette__input {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  outline: none;
+}
+
+.cmd-palette__close {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
+  color: var(--text-muted);
+}
+
+.cmd-palette__close:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-hover);
+}
+
+.cmd-palette__list {
+  max-height: 380px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.cmd-palette__status {
+  padding: 10px 12px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.cmd-palette__group-title {
+  padding: 8px 10px 4px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.cmd-palette__item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  color: var(--text-secondary);
+}
+
+.cmd-palette__item--active {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.cmd-palette__thumb {
+  width: 30px;
+  height: 42px;
+  border-radius: 3px;
+  object-fit: cover;
+  background-color: var(--bg-main);
+  flex-shrink: 0;
+}
+
+.cmd-palette__icon-box {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-xs);
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-subtle);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.cmd-palette__item--active .cmd-palette__icon-box {
+  border-color: var(--accent-border);
+  color: var(--accent-hover);
+}
+
+.cmd-palette__item-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.cmd-palette__item-label {
+  font-size: 0.84375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cmd-palette__item-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.cmd-palette__footer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border-subtle);
+  background-color: #0E0E12;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+

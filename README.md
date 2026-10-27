@@ -52,10 +52,12 @@ src/
 ├── pages/
 │   ├── HomePage.tsx                 # Featured spotlight, Continue Watching, Trending, Recently Released, Seasonal, Popular, Top Rated, Seeded Recommendations
 │   ├── SearchPage.tsx               # Debounced search + Genre, Format, Season, Year, Sort filters + Surprise Me + pagination
+│   ├── SeasonsPage.tsx              # Seasonal Archive Explorer (Winter / Spring / Summer / Fall by year, format & sort)
 │   ├── SchedulePage.tsx             # 7-day Simulcast Schedule grouped by local broadcast day with live countdowns
-│   ├── AnimeDetailsPage.tsx         # Banner & cover artwork, English/Romaji/Native titles, synopsis, official YouTube trailer modal, episode list, relations, recommendations
-│   ├── WatchPage.tsx                # 16:9 player + Theater Mode, keyboard shortcuts (T / N / P), SUB/DUB switching, Prev/Next/Jump controls, Auto-Next
-│   ├── FavoritesPage.tsx            # Local-storage watchlist + JSON backup/restore
+│   ├── StudioPage.tsx               # Animation Studio filmography spotlight (/studio/:id)
+│   ├── AnimeDetailsPage.tsx         # Artwork, titles, live airing countdown, synopsis, JP/EN voice cast, official trailer modal, episodes, relations, recommendations
+│   ├── WatchPage.tsx                # 16:9 player + Theater Mode, Cinema Lights-Off dimmer, persistent SUB/DUB prefs, watched checkmarks, shortcuts (T / L / N / P / ?)
+│   ├── FavoritesPage.tsx            # Tabbed Favorites & Watchlist tracker (Watching, Plan to Watch, Completed, On Hold, Dropped + 1-10 scores + ep stepper)
 │   ├── HistoryPage.tsx              # Local-storage episode visit & verified playback progress log + JSON backup/restore
 │   └── NotFoundPage.tsx             # 404 fallback route
 ├── services/

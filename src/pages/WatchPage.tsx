@@ -4,14 +4,22 @@ import {
   AlertTriangle,
   ArrowLeft,
   Bookmark,
+  Check,
   ChevronLeft,
   ChevronRight,
+  Keyboard,
   Maximize2,
   Minimize2,
+  Moon,
   RefreshCw,
+  Share2,
+  Sun,
+  X,
 } from 'lucide-react';
 import { AdSlot } from '../components/monetization/SponsorSlot';
+import { AiringCountdownBanner } from '../components/anime/AiringCountdownBanner';
 import { EpisodeList } from '../components/anime/EpisodeList';
+import { WatchlistStatusSelect } from '../components/storage/WatchlistStatusSelect';
 import { ErrorState } from '../components/ui/StateFeedback';
 import { getAnimeDetails } from '../services/anilist/anilistService';
 import { getVideoProvider } from '../services/providers';
@@ -20,13 +28,16 @@ import {
   recordWatchVisit,
   updateVerifiedPlaybackProgress,
 } from '../services/storage/historyStore';
+import { useUserPreferences } from '../services/storage/preferencesStore';
+import { markEpisodeWatched } from '../services/storage/watchedEpisodesStore';
+import { syncWatchlistOnEpisodeVisit } from '../services/storage/watchlistStore';
 import type { AnimeDetails } from '../types/anime';
 import type { AudioTrack, ProviderIdMode } from '../types/provider';
 import {
   cleanSynopsis,
   formatMediaFormat,
   getDisplayTitle,
-  getMainStudioName,
+  getMainStudioInfo,
   getReleaseYear,
 } from '../utils/format';
 
@@ -35,14 +46,17 @@ export function WatchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const numericId = Number.parseInt(id ?? '', 10);
 
+  const { preferences, updatePreferences } = useUserPreferences();
+
   const [anime, setAnime] = useState<AnimeDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [idMode, setIdMode] = useState<ProviderIdMode>('anilist');
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [reloadNonce, setReloadNonce] = useState(0);
-  const [autoNext, setAutoNext] = useState(true);
-  const [theaterMode, setTheaterMode] = useState(false);
+  const [lightsOff, setLightsOff] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [manualEpInput, setManualEpInput] = useState('');
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
@@ -52,7 +66,15 @@ export function WatchPage() {
   const epParam = Number.parseInt(searchParams.get('ep') ?? '', 10);
   const currentEpisode = Number.isInteger(epParam) && epParam >= 1 ? epParam : 1;
   const audioParam = searchParams.get('audio');
-  const currentAudio: AudioTrack = audioParam === 'dub' ? 'dub' : 'sub';
+  const currentAudio: AudioTrack =
+    audioParam === 'dub'
+      ? 'dub'
+      : audioParam === 'sub'
+        ? 'sub'
+        : preferences.preferredAudio;
+
+  const autoNext = preferences.autoNext;
+  const theaterMode = preferences.theaterMode;
 
   const loadAnime = useCallback(
     async (bypassCache = false) => {
@@ -82,6 +104,7 @@ export function WatchPage() {
   useEffect(() => {
     window.scrollTo(0, 0);
     setIdMode('anilist');
+    setLightsOff(false);
     void loadAnime(false);
   }, [loadAnime]);
 
@@ -110,6 +133,7 @@ export function WatchPage() {
       ? currentEpisode < catalogue.airedEpisodeCount
       : true
     : false;
+  const hasPrev = currentEpisode > 1;
 
   const setNavigationState = useCallback(
     (nextEp: number, nextAudio: AudioTrack = currentAudio) => {
@@ -120,9 +144,12 @@ export function WatchPage() {
       } else {
         params.delete('audio');
       }
+      if (nextAudio !== preferences.preferredAudio) {
+        updatePreferences({ preferredAudio: nextAudio });
+      }
       setSearchParams(params);
     },
-    [currentAudio, searchParams, setSearchParams],
+    [currentAudio, preferences.preferredAudio, searchParams, setSearchParams, updatePreferences],
   );
 
   useEffect(() => {
@@ -141,6 +168,8 @@ export function WatchPage() {
         episodeTitle: activeEpisodeMeta?.title ?? null,
         audio: currentAudio,
       });
+      markEpisodeWatched(anime.id, currentEpisode);
+      syncWatchlistOnEpisodeVisit(anime, currentEpisode);
     }
   }, [anime, currentEpisode, currentAudio, activeEpisodeMeta?.title, playbackSource?.ok]);
 
@@ -176,11 +205,20 @@ export function WatchPage() {
     return () => window.removeEventListener('message', handleMessage);
   }, [anime, autoNext, currentAudio, currentEpisode, hasNext, provider, setNavigationState]);
 
-  const hasPrev = currentEpisode > 1;
-
-  // Accessible keyboard shortcuts on watch page: T = Theater, N = Next, P = Previous
+  // Accessible keyboard shortcuts: T = Theater, L = Lights Off, N = Next, P = Previous, ? = Help
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (shortcutsOpen) {
+          setShortcutsOpen(false);
+          return;
+        }
+        if (lightsOff) {
+          setLightsOff(false);
+          return;
+        }
+      }
+
       if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) {
         return;
       }
@@ -195,10 +233,19 @@ export function WatchPage() {
         return;
       }
 
+      if (event.key === '?') {
+        event.preventDefault();
+        setShortcutsOpen((prev) => !prev);
+        return;
+      }
+
       const key = event.key.toLowerCase();
       if (key === 't') {
         event.preventDefault();
-        setTheaterMode((prev) => !prev);
+        updatePreferences({ theaterMode: !theaterMode });
+      } else if (key === 'l') {
+        event.preventDefault();
+        setLightsOff((prev) => !prev);
       } else if (key === 'n' && hasNext) {
         event.preventDefault();
         setNavigationState(currentEpisode + 1, currentAudio);
@@ -210,7 +257,17 @@ export function WatchPage() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [currentAudio, currentEpisode, hasNext, hasPrev, setNavigationState]);
+  }, [
+    currentAudio,
+    currentEpisode,
+    hasNext,
+    hasPrev,
+    lightsOff,
+    setNavigationState,
+    shortcutsOpen,
+    theaterMode,
+    updatePreferences,
+  ]);
 
   if (!loading && (errorMessage || !anime || !catalogue || !playbackSource)) {
     return (
@@ -233,12 +290,20 @@ export function WatchPage() {
 
   const title = anime ? getDisplayTitle(anime.title) : '';
   const favorited = anime ? isFavorite(anime.id) : false;
-  const studioName = anime ? getMainStudioName(anime) : null;
+  const studioInfo = anime ? getMainStudioInfo(anime) : null;
   const synopsis = anime ? cleanSynopsis(anime.description) : '';
   const iframeSrc = playbackSource?.embedUrl ?? null;
 
   return (
     <div className="container watch-page" aria-busy={isInitialLoading || undefined}>
+      {lightsOff && (
+        <div
+          className="cinema-dimmer-backdrop"
+          aria-label="Turn lights back on"
+          onClick={() => setLightsOff(false)}
+        />
+      )}
+
       {isInitialLoading ? (
         <div
           className="skeleton-block"
@@ -269,7 +334,7 @@ export function WatchPage() {
             </>
           ) : (
             <>
-              <div className="player-frame">
+              <div className={`player-frame${lightsOff ? ' player-frame--cinema' : ''}`}>
                 {playbackSource.ok && iframeSrc ? (
                   <>
                     {!iframeLoaded && (
@@ -326,7 +391,12 @@ export function WatchPage() {
                 )}
               </div>
 
-              <div className="watch-controls-bar" aria-label="Playback and episode controls">
+              <div
+                className={`watch-controls-bar${
+                  lightsOff ? ' watch-controls-bar--cinema' : ''
+                }`}
+                aria-label="Playback and episode controls"
+              >
                 <div className="watch-controls-group">
                   <button
                     type="button"
@@ -438,7 +508,7 @@ export function WatchPage() {
                     }`}
                     aria-pressed={theaterMode}
                     title="Toggle Theater Mode (T)"
-                    onClick={() => setTheaterMode((prev) => !prev)}
+                    onClick={() => updatePreferences({ theaterMode: !theaterMode })}
                   >
                     {theaterMode ? (
                       <Minimize2 size={14} aria-hidden="true" />
@@ -451,10 +521,27 @@ export function WatchPage() {
                   <button
                     type="button"
                     className={`btn btn--ghost btn--compact${
+                      lightsOff ? ' btn--active-accent' : ''
+                    }`}
+                    aria-pressed={lightsOff}
+                    title="Toggle Cinema Dimmer (L)"
+                    onClick={() => setLightsOff((prev) => !prev)}
+                  >
+                    {lightsOff ? (
+                      <Sun size={14} aria-hidden="true" />
+                    ) : (
+                      <Moon size={14} aria-hidden="true" />
+                    )}
+                    <span>{lightsOff ? 'Lights On' : 'Lights Off'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`btn btn--ghost btn--compact${
                       autoNext ? ' btn--active-accent' : ''
                     }`}
                     aria-pressed={autoNext}
-                    onClick={() => setAutoNext((prev) => !prev)}
+                    onClick={() => updatePreferences({ autoNext: !autoNext })}
                   >
                     <span>Auto-Next</span>
                   </button>
@@ -468,8 +555,22 @@ export function WatchPage() {
                     <RefreshCw size={14} aria-hidden="true" />
                     <span>Reload</span>
                   </button>
+
+                  <button
+                    type="button"
+                    className="btn btn--ghost btn--compact"
+                    aria-label="Keyboard shortcuts"
+                    title="Keyboard shortcuts (?)"
+                    onClick={() => setShortcutsOpen(true)}
+                  >
+                    <Keyboard size={14} aria-hidden="true" />
+                  </button>
                 </div>
               </div>
+
+              {anime.nextAiringEpisode && (
+                <AiringCountdownBanner nextAiring={anime.nextAiringEpisode} />
+              )}
 
               <section className="watch-info-panel" aria-label="Current episode details">
                 <div className="watch-info-panel__header">
@@ -479,13 +580,26 @@ export function WatchPage() {
                       Episode {currentEpisode}
                       {activeEpisodeMeta?.title ? ` — ${activeEpisodeMeta.title}` : ''}
                       {' · '}
-                      {[formatMediaFormat(anime.format), getReleaseYear(anime), studioName]
+                      {[formatMediaFormat(anime.format), getReleaseYear(anime)]
                         .filter(Boolean)
                         .join(' · ')}
+                      {studioInfo && (
+                        <>
+                          {' · '}
+                          <Link
+                            to={`/studio/${studioInfo.id}`}
+                            className="details-meta-link"
+                          >
+                            {studioInfo.name}
+                          </Link>
+                        </>
+                      )}
                     </p>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    <WatchlistStatusSelect anime={anime} compact />
+
                     <button
                       type="button"
                       className={`btn btn--ghost btn--compact${
@@ -501,6 +615,28 @@ export function WatchPage() {
                       />
                       <span>{favorited ? 'Saved' : 'Favorite'}</span>
                     </button>
+
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--compact"
+                      onClick={() => {
+                        void navigator.clipboard
+                          ?.writeText(window.location.href)
+                          .then(() => {
+                            setCopiedLink(true);
+                            window.setTimeout(() => setCopiedLink(false), 2000);
+                          })
+                          .catch(() => {});
+                      }}
+                    >
+                      {copiedLink ? (
+                        <Check size={14} aria-hidden="true" />
+                      ) : (
+                        <Share2 size={14} aria-hidden="true" />
+                      )}
+                      <span>{copiedLink ? 'Copied' : 'Share'}</span>
+                    </button>
+
                     <Link to={`/anime/${anime.id}`} className="btn btn--secondary btn--compact">
                       Details
                     </Link>
@@ -590,6 +726,59 @@ export function WatchPage() {
           <AdSlot key="watch-sidebar-rectangle" placement="watch-sidebar-rectangle" />
         </div>
       </div>
+
+      {shortcutsOpen && (
+        <div
+          className="trailer-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Keyboard shortcuts"
+          onClick={() => setShortcutsOpen(false)}
+        >
+          <div
+            className="shortcuts-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="trailer-modal__header">
+              <span className="trailer-modal__title">Keyboard Shortcuts</span>
+              <button
+                type="button"
+                className="btn btn--ghost btn--compact"
+                aria-label="Close shortcuts dialog"
+                onClick={() => setShortcutsOpen(false)}
+              >
+                <X size={15} aria-hidden="true" />
+              </button>
+            </div>
+            <div className="shortcuts-modal__body">
+              <div className="shortcut-row">
+                <span>Toggle Theater Mode</span>
+                <kbd className="shortcut-kbd">T</kbd>
+              </div>
+              <div className="shortcut-row">
+                <span>Toggle Cinema Lights Off</span>
+                <kbd className="shortcut-kbd">L</kbd>
+              </div>
+              <div className="shortcut-row">
+                <span>Next Episode</span>
+                <kbd className="shortcut-kbd">N</kbd>
+              </div>
+              <div className="shortcut-row">
+                <span>Previous Episode</span>
+                <kbd className="shortcut-kbd">P</kbd>
+              </div>
+              <div className="shortcut-row">
+                <span>Quick Search Focus</span>
+                <kbd className="shortcut-kbd">/</kbd>
+              </div>
+              <div className="shortcut-row">
+                <span>Command Palette</span>
+                <kbd className="shortcut-kbd">Ctrl + K</kbd>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

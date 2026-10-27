@@ -7,6 +7,7 @@ import type {
   MediaSort,
   PaginatedAnimeResult,
   RecentAiringItem,
+  StudioCatalogueData,
 } from '../../types/anime';
 import { getCurrentSeason } from '../../utils/format';
 import { anilistRequest, AniListApiError } from './client';
@@ -16,6 +17,7 @@ import {
   HOME_CATALOGUE_QUERY,
   SEARCH_ANIME_QUERY,
   SEEDED_RECOMMENDATIONS_QUERY,
+  STUDIO_CATALOGUE_QUERY,
   WEEKLY_SCHEDULE_QUERY,
 } from './queries';
 
@@ -175,6 +177,9 @@ export async function getAnimeDetails(
     synonyms: data.Media.synonyms ?? [],
     streamingEpisodes: data.Media.streamingEpisodes ?? [],
     externalLinks: data.Media.externalLinks ?? [],
+    characters: {
+      edges: (data.Media.characters?.edges ?? []).filter((edge) => Boolean(edge?.node)),
+    },
     relations: {
       edges: (data.Media.relations?.edges ?? []).filter((edge) => Boolean(edge?.node)),
     },
@@ -327,5 +332,74 @@ export async function getSurpriseAnime(options?: {
 
   const randomIndex = Math.floor(Math.random() * candidates.length);
   return candidates[randomIndex];
+}
+
+interface RawStudioResponse {
+  Studio: {
+    id: number;
+    name: string;
+    isAnimationStudio: boolean;
+    siteUrl: string | null;
+    favourites: number | null;
+    media: {
+      pageInfo: {
+        currentPage: number;
+        hasNextPage: boolean;
+        perPage: number;
+      };
+      nodes: AnimeSummary[];
+    };
+  } | null;
+}
+
+export async function getStudioCatalogue(
+  studioId: number,
+  params?: {
+    page?: number;
+    perPage?: number;
+    sort?: MediaSort;
+    signal?: AbortSignal;
+    bypassCache?: boolean;
+  },
+): Promise<StudioCatalogueData> {
+  if (!Number.isInteger(studioId) || studioId <= 0) {
+    throw new AniListApiError('Invalid AniList studio identifier.', { status: 400 });
+  }
+
+  const page = Math.max(1, params?.page ?? 1);
+  const perPage = Math.min(50, Math.max(1, params?.perPage ?? 24));
+  const sort: MediaSort[] = [params?.sort ?? 'POPULARITY_DESC'];
+
+  const data = await anilistRequest<RawStudioResponse>(
+    STUDIO_CATALOGUE_QUERY,
+    { id: studioId, page, perPage, sort },
+    {
+      ttlMs: 10 * 60 * 1000,
+      signal: params?.signal,
+      bypassCache: params?.bypassCache,
+    },
+  );
+
+  if (!data.Studio) {
+    throw new AniListApiError('Studio not found on AniList.', { status: 404 });
+  }
+
+  const animeNodes = (data.Studio.media?.nodes ?? []).filter(
+    (node) => isSafeAnime(node) && (!node.type || node.type === 'ANIME'),
+  );
+
+  return {
+    id: data.Studio.id,
+    name: data.Studio.name,
+    isAnimationStudio: Boolean(data.Studio.isAnimationStudio),
+    siteUrl: data.Studio.siteUrl ?? null,
+    favourites: data.Studio.favourites ?? null,
+    pageInfo: {
+      currentPage: data.Studio.media?.pageInfo?.currentPage ?? page,
+      hasNextPage: Boolean(data.Studio.media?.pageInfo?.hasNextPage),
+      perPage: data.Studio.media?.pageInfo?.perPage ?? perPage,
+    },
+    media: animeNodes,
+  };
 }
 
