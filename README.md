@@ -30,12 +30,14 @@ npm run typecheck
 npm test
 ```
 
-### Build for Production
+### Build & Run Production Server (with Watch Party WebSocket Hub)
 
 ```bash
 npm run build
-npm run preview
+npm start
 ```
+
+`npm start` launches `server/prodServer.mjs` on `0.0.0.0:${PORT || 4173}`, serving the compiled `dist/` bundle together with the real-time `/api/party/*` REST endpoints and `/ws/party` WebSocket hub. (`npm run dev` and `npm run preview` also mount the exact same Watch Party hub automatically via Vite.)
 
 ---
 
@@ -54,6 +56,8 @@ src/
 │   ├── SearchPage.tsx               # Debounced search + Genre, Format, Season, Year, Sort filters + Surprise Me + pagination
 │   ├── SeasonsPage.tsx              # Seasonal Archive Explorer (Winter / Spring / Summer / Fall by year, format & sort)
 │   ├── SchedulePage.tsx             # 7-day Simulcast Schedule grouped by local broadcast day with live countdowns
+│   ├── WatchPartyLobbyPage.tsx      # Create private/passcode-locked Watch Party rooms or join via 6-char invite code
+│   ├── WatchPartyRoomPage.tsx       # Real-time WebSocket synced playback (Yenime & direct HTTPS streams), live chat & host moderation
 │   ├── StudioPage.tsx               # Animation Studio filmography spotlight (/studio/:id)
 │   ├── AnimeDetailsPage.tsx         # Artwork, titles, live airing countdown, synopsis, JP/EN voice cast, official trailer modal, episodes, relations, recommendations
 │   ├── WatchPage.tsx                # 16:9 player + Theater Mode, Cinema Lights-Off dimmer, persistent SUB/DUB prefs, watched checkmarks, shortcuts (T / L / N / P / ?)

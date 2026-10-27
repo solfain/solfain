@@ -108,6 +108,12 @@ export const ADSTERRA_SLOTS: Record<AdPlacement, AdsterraSlotConfig> = {
     unit: ADSTERRA_UNIT_300X250,
     dimensions: DIMS_300X250,
   },
+  'party-bottom-rectangle': {
+    placement: 'party-bottom-rectangle',
+    label: 'Watch Party Lobby Rectangle',
+    unit: ADSTERRA_UNIT_300X250,
+    dimensions: DIMS_300X250,
+  },
   'details-inline': {
     placement: 'details-inline',
     label: 'Details Inline Banner',

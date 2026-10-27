@@ -7,6 +7,7 @@ export type AdPlacement =
   | 'seasons-bottom-rectangle'
   | 'schedule-bottom-rectangle'
   | 'studio-bottom-rectangle'
+  | 'party-bottom-rectangle'
   | 'details-inline'
   | 'details-bottom-banner'
   | 'sidebar-rectangle'

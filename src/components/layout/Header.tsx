@@ -183,6 +183,14 @@ export function Header() {
               Schedule
             </NavLink>
             <NavLink
+              to="/party"
+              className={({ isActive }) =>
+                `primary-nav__link${isActive ? ' primary-nav__link--active' : ''}`
+              }
+            >
+              Watch Party
+            </NavLink>
+            <NavLink
               to="/favorites"
               className={({ isActive }) =>
                 `primary-nav__link${isActive ? ' primary-nav__link--active' : ''}`
@@ -357,6 +365,14 @@ export function Header() {
               }
             >
               <span>Schedule</span>
+            </NavLink>
+            <NavLink
+              to="/party"
+              className={({ isActive }) =>
+                `mobile-drawer__link${isActive ? ' mobile-drawer__link--active' : ''}`
+              }
+            >
+              <span>Watch Party</span>
             </NavLink>
             <NavLink
               to="/favorites"

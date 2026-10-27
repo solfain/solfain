@@ -11,6 +11,7 @@ import {
   Search,
   Shuffle,
   Sparkles,
+  Users,
   X,
 } from 'lucide-react';
 import { getSurpriseAnime, searchAnime } from '../../services/anilist/anilistService';
@@ -31,7 +32,16 @@ interface PaletteItem {
   sublabel?: string;
   thumbnail?: string | null;
   group: 'Continue' | 'Anime Results' | 'Navigation';
-  icon?: 'play' | 'home' | 'browse' | 'seasons' | 'schedule' | 'favorites' | 'history' | 'surprise';
+  icon?:
+    | 'play'
+    | 'home'
+    | 'browse'
+    | 'seasons'
+    | 'schedule'
+    | 'party'
+    | 'favorites'
+    | 'history'
+    | 'surprise';
   onSelect: () => void | Promise<void>;
 }
 
@@ -151,6 +161,16 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
           } catch {
             navigate('/search');
           }
+        },
+      },
+      {
+        id: 'nav-party',
+        label: 'Watch Parties (Create or Join Room)',
+        sublabel: 'Private rooms, synced playback, and live room chat',
+        icon: 'party',
+        action: () => {
+          onClose();
+          navigate('/party');
         },
       },
       {
@@ -280,6 +300,8 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
         return <Sparkles size={14} aria-hidden="true" />;
       case 'schedule':
         return <Calendar size={14} aria-hidden="true" />;
+      case 'party':
+        return <Users size={14} aria-hidden="true" />;
       case 'browse':
         return <Compass size={14} aria-hidden="true" />;
       case 'favorites':

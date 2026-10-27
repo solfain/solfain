@@ -8,6 +8,7 @@ import {
   Play,
   Share2,
   Star,
+  Users,
   Video,
   X,
 } from 'lucide-react';
@@ -335,6 +336,16 @@ export function AnimeDetailsPage() {
                 </button>
 
                 <WatchlistStatusSelect anime={anime} />
+
+                {canStream && (
+                  <Link
+                    to={`/party?animeId=${anime.id}&ep=${resumeEpisode}&audio=${resumeAudio}`}
+                    className="btn btn--ghost"
+                  >
+                    <Users size={16} aria-hidden="true" />
+                    <span>Watch Party</span>
+                  </Link>
+                )}
 
                 {trailerEmbedUrl && (
                   <button

@@ -13,6 +13,8 @@ import { SearchPage } from './pages/SearchPage';
 import { SeasonsPage } from './pages/SeasonsPage';
 import { StudioPage } from './pages/StudioPage';
 import { WatchPage } from './pages/WatchPage';
+import { WatchPartyLobbyPage } from './pages/WatchPartyLobbyPage';
+import { WatchPartyRoomPage } from './pages/WatchPartyRoomPage';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -38,6 +40,8 @@ export function AppRoutes() {
             <Route path="/search" element={<SearchPage />} />
             <Route path="/seasons" element={<SeasonsPage />} />
             <Route path="/schedule" element={<SchedulePage />} />
+            <Route path="/party" element={<WatchPartyLobbyPage />} />
+            <Route path="/party/:roomId" element={<WatchPartyRoomPage />} />
             <Route path="/studio/:id" element={<StudioPage />} />
             <Route path="/anime/:id" element={<AnimeDetailsPage />} />
             <Route path="/watch/:id" element={<WatchPage />} />

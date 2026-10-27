@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Share2,
   Sun,
+  Users,
   X,
 } from 'lucide-react';
 import { AdSlot } from '../components/monetization/SponsorSlot';
@@ -615,6 +616,14 @@ export function WatchPage() {
                       />
                       <span>{favorited ? 'Saved' : 'Favorite'}</span>
                     </button>
+
+                    <Link
+                      to={`/party?animeId=${anime.id}&ep=${currentEpisode}&audio=${currentAudio}`}
+                      className="btn btn--ghost btn--compact"
+                    >
+                      <Users size={14} aria-hidden="true" />
+                      <span>Watch Party</span>
+                    </Link>
 
                     <button
                       type="button"

@@ -23,6 +23,7 @@ export function Footer() {
           <Link to="/search">Browse</Link>
           <Link to="/seasons">Seasons</Link>
           <Link to="/schedule">Schedule</Link>
+          <Link to="/party">Watch Party</Link>
           <Link to="/favorites">Watchlist</Link>
           <Link to="/history">Watch History</Link>
         </nav>

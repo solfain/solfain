@@ -284,9 +284,11 @@ describe('Expanded Streaming & Discovery Features', () => {
     });
 
     // Episode 2 automatically marked watched & watchlist promoted from plan_to_watch -> watching
-    expect(getWatchedEpisodesForAnime(124080)).toContain(2);
-    expect(getWatchlist()[0]?.status).toBe('watching');
-    expect(getWatchlist()[0]?.watchedEpisodes).toBe(2);
+    await waitFor(() => {
+      expect(getWatchedEpisodesForAnime(124080)).toContain(2);
+      expect(getWatchlist()[0]?.status).toBe('watching');
+      expect(getWatchlist()[0]?.watchedEpisodes).toBe(2);
+    });
 
     // Toggle Cinema Lights Off via 'L' key
     fireEvent.keyDown(window, { key: 'l' });
