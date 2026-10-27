@@ -65,5 +65,8 @@ export interface VideoProviderAdapter {
   readonly capabilities: ProviderCapabilities;
   buildEpisodeCatalogue(anime: AnimeDetails | AnimeSummary): EpisodeCatalogue;
   resolvePlaybackSource(request: PlaybackRequest): PlaybackSourceResult;
-  parsePlayerMessage(event: MessageEvent): PlayerTelemetryPayload | null;
+  parsePlayerMessage(
+    event: MessageEvent,
+    expectedSource?: MessageEventSource | null,
+  ): PlayerTelemetryPayload | null;
 }

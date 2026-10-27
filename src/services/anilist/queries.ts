@@ -213,3 +213,25 @@ export const GENRE_COLLECTION_QUERY = `
     GenreCollection
   }
 `;
+
+export const WEEKLY_SCHEDULE_QUERY = `
+  ${MEDIA_CARD_FRAGMENT}
+  query WeeklySchedule($startAt: Int!, $endAt: Int!, $page: Int = 1, $perPage: Int = 50) {
+    Page(page: $page, perPage: $perPage) {
+      pageInfo {
+        currentPage
+        hasNextPage
+        perPage
+      }
+      airingSchedules(airingAt_greater: $startAt, airingAt_lesser: $endAt, sort: [TIME]) {
+        id
+        episode
+        airingAt
+        timeUntilAiring
+        media {
+          ...MediaCardFields
+        }
+      }
+    }
+  }
+`;

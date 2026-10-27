@@ -1,88 +1,134 @@
+import { safeJsonParse } from '../../utils/security';
+
 export const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
+export const ANILIST_GRAPHQL_URL = ANILIST_ENDPOINT;
+
+const SESSION_CACHE_PREFIX = 'solfain:anilist:v1:';
+const DEFAULT_TTL_MS = 5 * 60 * 1000;
+const REQUEST_TIMEOUT_MS = 15_000;
+const MAX_MEMORY_CACHE_ENTRIES = 120;
+
+interface CacheRecord<T> {
+  expiresAt: number;
+  data: T;
+}
+
+const memoryCache = new Map<string, CacheRecord<unknown>>();
+const inflightRequests = new Map<string, Promise<unknown>>();
 
 export class AniListApiError extends Error {
   readonly status: number;
-  readonly isRateLimited: boolean;
+  readonly isRateLimit: boolean;
   readonly retryAfterSeconds: number | null;
 
   constructor(
     message: string,
-    options: {
-      status?: number;
-      isRateLimited?: boolean;
-      retryAfterSeconds?: number | null;
-    } = {},
+    options: { status?: number; isRateLimit?: boolean; retryAfterSeconds?: number | null } = {},
   ) {
     super(message);
     this.name = 'AniListApiError';
     this.status = options.status ?? 0;
-    this.isRateLimited = options.isRateLimited ?? false;
+    this.isRateLimit = options.isRateLimit ?? false;
     this.retryAfterSeconds = options.retryAfterSeconds ?? null;
   }
 }
 
-interface CacheRecord<T> {
-  data: T;
-  expiresAt: number;
+function stableHash(input: string): string {
+  let hash = 5381;
+  for (let i = 0; i < input.length; i += 1) {
+    hash = (hash * 33) ^ input.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(36);
 }
 
-const SESSION_CACHE_PREFIX = 'solfain:anilist:v1:';
-const memoryCache = new Map<string, CacheRecord<unknown>>();
-const inflightRequests = new Map<string, Promise<unknown>>();
-
-function buildCacheKey(query: string, variables?: Record<string, unknown>): string {
+function makeCacheKey(query: string, variables: Record<string, unknown>): string {
   const normalizedQuery = query.replace(/\s+/g, ' ').trim();
-  const sortedVars = variables
-    ? Object.keys(variables)
-        .sort()
-        .reduce<Record<string, unknown>>((acc, key) => {
-          const val = variables[key];
-          if (val !== undefined && val !== '') {
-            acc[key] = val;
-          }
-          return acc;
-        }, {})
-    : {};
-  return `${normalizedQuery}::${JSON.stringify(sortedVars)}`;
+  return `${SESSION_CACHE_PREFIX}${stableHash(`${normalizedQuery}::${JSON.stringify(variables)}`)}`;
 }
 
-function readCached<T>(key: string): T | null {
+function setBoundedMemoryCache<T>(key: string, record: CacheRecord<T>): void {
+  if (memoryCache.has(key)) {
+    memoryCache.delete(key);
+  } else if (memoryCache.size >= MAX_MEMORY_CACHE_ENTRIES) {
+    const oldestKey = memoryCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      memoryCache.delete(oldestKey);
+    }
+  }
+  memoryCache.set(key, record);
+}
+
+function pruneSessionCache(): void {
+  try {
+    const now = Date.now();
+    const keysToDelete: string[] = [];
+    for (let i = 0; i < window.sessionStorage.length; i += 1) {
+      const k = window.sessionStorage.key(i);
+      if (!k || !k.startsWith(SESSION_CACHE_PREFIX)) continue;
+      const raw = window.sessionStorage.getItem(k);
+      if (!raw) {
+        keysToDelete.push(k);
+        continue;
+      }
+      try {
+        const parsed = safeJsonParse(raw) as CacheRecord<unknown>;
+        if (!parsed || typeof parsed.expiresAt !== 'number' || parsed.expiresAt <= now) {
+          keysToDelete.push(k);
+        }
+      } catch {
+        keysToDelete.push(k);
+      }
+    }
+    keysToDelete.forEach((k) => window.sessionStorage.removeItem(k));
+  } catch {
+    // Ignore storage inspection failures
+  }
+}
+
+function readCache<T>(key: string): T | null {
   const now = Date.now();
-  const mem = memoryCache.get(key);
+  const mem = memoryCache.get(key) as CacheRecord<T> | undefined;
   if (mem) {
     if (mem.expiresAt > now) {
-      return mem.data as T;
+      // Refresh LRU position
+      memoryCache.delete(key);
+      memoryCache.set(key, mem);
+      return mem.data;
     }
     memoryCache.delete(key);
   }
 
   try {
-    const raw = window.sessionStorage.getItem(SESSION_CACHE_PREFIX + key);
+    const raw = window.sessionStorage.getItem(key);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as CacheRecord<T>;
-    if (parsed && typeof parsed.expiresAt === 'number' && parsed.expiresAt > now && 'data' in parsed) {
-      memoryCache.set(key, parsed);
+    const parsed = safeJsonParse(raw) as CacheRecord<T>;
+    if (parsed && typeof parsed.expiresAt === 'number' && parsed.expiresAt > now) {
+      setBoundedMemoryCache(key, parsed);
       return parsed.data;
     }
-    window.sessionStorage.removeItem(SESSION_CACHE_PREFIX + key);
+    window.sessionStorage.removeItem(key);
   } catch {
-    // Ignore storage access errors in restricted browsing modes
+    // Ignore storage unavailability
   }
 
   return null;
 }
 
-function writeCached<T>(key: string, data: T, ttlMs: number): void {
-  if (ttlMs <= 0) return;
+function writeCache<T>(key: string, data: T, ttlMs: number): void {
   const record: CacheRecord<T> = {
-    data,
     expiresAt: Date.now() + ttlMs,
+    data,
   };
-  memoryCache.set(key, record);
+  setBoundedMemoryCache(key, record);
   try {
-    window.sessionStorage.setItem(SESSION_CACHE_PREFIX + key, JSON.stringify(record));
+    window.sessionStorage.setItem(key, JSON.stringify(record));
   } catch {
-    // Ignore quota exceeded errors
+    pruneSessionCache();
+    try {
+      window.sessionStorage.setItem(key, JSON.stringify(record));
+    } catch {
+      // Ignore quota exceeded
+    }
   }
 }
 
@@ -97,118 +143,141 @@ export function clearAniListCache(): void {
         keysToRemove.push(k);
       }
     }
-    for (const k of keysToRemove) {
-      window.sessionStorage.removeItem(k);
-    }
+    keysToRemove.forEach((k) => window.sessionStorage.removeItem(k));
   } catch {
-    // Ignore storage access errors
+    // Ignore
   }
 }
 
-interface GraphQLResponse<T> {
-  data?: T | null;
-  errors?: Array<{
-    message?: string;
-    status?: number;
-  }>;
-}
-
-export interface GraphQLRequestOptions {
+export interface AniListRequestOptions {
   ttlMs?: number;
   signal?: AbortSignal;
   bypassCache?: boolean;
 }
 
-export async function anilistRequest<T>(
+function createTimedSignal(
+  callerSignal: AbortSignal | undefined,
+  timeoutMs: number,
+): { signal: AbortSignal; cleanup: () => void; didTimeout: () => boolean } {
+  const controller = new AbortController();
+  let timedOut = false;
+
+  const timer = globalThis.setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+
+  const onCallerAbort = () => {
+    controller.abort();
+  };
+
+  if (callerSignal) {
+    if (callerSignal.aborted) {
+      controller.abort();
+    } else {
+      callerSignal.addEventListener('abort', onCallerAbort, { once: true });
+    }
+  }
+
+  const cleanup = () => {
+    globalThis.clearTimeout(timer);
+    if (callerSignal) {
+      callerSignal.removeEventListener('abort', onCallerAbort);
+    }
+  };
+
+  return {
+    signal: controller.signal,
+    cleanup,
+    didTimeout: () => timedOut,
+  };
+}
+
+export async function anilistRequest<TData>(
   query: string,
-  variables?: Record<string, unknown>,
-  options: GraphQLRequestOptions = {},
-): Promise<T> {
-  const ttlMs = options.ttlMs ?? 5 * 60 * 1000;
-  const cacheKey = buildCacheKey(query, variables);
+  variables: Record<string, unknown> = {},
+  options: AniListRequestOptions = {},
+): Promise<TData> {
+  const ttlMs = options.ttlMs ?? DEFAULT_TTL_MS;
+  const cacheKey = makeCacheKey(query, variables);
 
   if (!options.bypassCache) {
-    const cached = readCached<T>(cacheKey);
+    const cached = readCache<TData>(cacheKey);
     if (cached !== null) {
       return cached;
     }
   }
 
-  const canDeduplicate = !options.signal;
-  if (canDeduplicate) {
-    const existing = inflightRequests.get(cacheKey);
-    if (existing) {
-      return existing as Promise<T>;
+  if (!options.signal) {
+    const inflight = inflightRequests.get(cacheKey) as Promise<TData> | undefined;
+    if (inflight) {
+      return inflight;
     }
   }
 
-  const execute = async (): Promise<T> => {
+  const timed = createTimedSignal(options.signal, REQUEST_TIMEOUT_MS);
+
+  const task = (async (): Promise<TData> => {
     let response: Response;
     try {
-      response = await fetch(ANILIST_ENDPOINT, {
+      response = await fetch(ANILIST_GRAPHQL_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
-        body: JSON.stringify({
-          query,
-          variables: variables ?? {},
-        }),
-        signal: options.signal,
+        body: JSON.stringify({ query, variables }),
+        signal: timed.signal,
       });
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        throw err;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError' && !timed.didTimeout()) {
+        throw error;
       }
-      if (err && typeof err === 'object' && 'name' in err && err.name === 'AbortError') {
-        throw err;
+      if (timed.didTimeout()) {
+        throw new AniListApiError(
+          'AniList took too long to respond. Please check your connection and retry.',
+        );
       }
       throw new AniListApiError(
         'Unable to reach AniList right now. Check your network connection and try again.',
       );
+    } finally {
+      timed.cleanup();
     }
-
-    const retryAfterHeader = response.headers.get('Retry-After');
-    const retryAfterSeconds = retryAfterHeader ? Number.parseInt(retryAfterHeader, 10) : null;
 
     if (response.status === 429) {
-      const waitLabel =
-        retryAfterSeconds && Number.isFinite(retryAfterSeconds)
-          ? ` Please wait ${retryAfterSeconds} seconds before retrying.`
-          : ' Please wait a moment before retrying.';
-      throw new AniListApiError(`AniList rate limit reached.${waitLabel}`, {
-        status: 429,
-        isRateLimited: true,
-        retryAfterSeconds: Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : null,
-      });
-    }
-
-    let payload: GraphQLResponse<T>;
-    try {
-      payload = (await response.json()) as GraphQLResponse<T>;
-    } catch {
+      const retryHeader = response.headers.get('Retry-After');
+      const retryAfterSeconds = retryHeader ? Number.parseInt(retryHeader, 10) : null;
       throw new AniListApiError(
-        `Received an invalid response from AniList (HTTP ${response.status}).`,
-        { status: response.status },
+        'AniList rate limit reached. Please wait a moment and retry.',
+        {
+          status: 429,
+          isRateLimit: true,
+          retryAfterSeconds: Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : null,
+        },
       );
     }
 
-    if (!response.ok || (payload.errors && payload.errors.length > 0 && !payload.data)) {
+    let payload: { data?: TData; errors?: Array<{ message?: string; status?: number }> };
+    try {
+      payload = (await response.json()) as {
+        data?: TData;
+        errors?: Array<{ message?: string; status?: number }>;
+      };
+    } catch {
+      throw new AniListApiError(`Unexpected response from AniList (HTTP ${response.status}).`, {
+        status: response.status,
+      });
+    }
+
+    if (!response.ok || (payload.errors && payload.errors.length > 0)) {
       const firstError = payload.errors?.[0];
       const status = firstError?.status ?? response.status;
-      const is429 = status === 429;
-      if (status === 404) {
-        throw new AniListApiError('The requested anime entry could not be found on AniList.', {
-          status: 404,
-        });
-      }
       throw new AniListApiError(
-        firstError?.message || `AniList request failed (HTTP ${status}).`,
+        firstError?.message || `AniList request failed (HTTP ${response.status}).`,
         {
           status,
-          isRateLimited: is429,
-          retryAfterSeconds: Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : null,
+          isRateLimit: status === 429,
         },
       );
     }
@@ -219,19 +288,24 @@ export async function anilistRequest<T>(
       });
     }
 
-    writeCached(cacheKey, payload.data, ttlMs);
-    return payload.data;
-  };
-
-  const promise = execute().finally(() => {
-    if (canDeduplicate) {
-      inflightRequests.delete(cacheKey);
+    if (ttlMs > 0) {
+      writeCache(cacheKey, payload.data, ttlMs);
     }
-  });
 
-  if (canDeduplicate) {
-    inflightRequests.set(cacheKey, promise);
+    return payload.data;
+  })();
+
+  if (!options.signal) {
+    inflightRequests.set(cacheKey, task);
+    void task.then(
+      () => {
+        inflightRequests.delete(cacheKey);
+      },
+      () => {
+        inflightRequests.delete(cacheKey);
+      },
+    );
   }
 
-  return promise;
+  return task;
 }

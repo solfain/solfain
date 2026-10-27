@@ -7,8 +7,10 @@ import type {
   PlayerTelemetryPayload,
   VideoProviderAdapter,
 } from '../../types/provider';
+import { sanitizeHttpUrl, sanitizePlainText } from '../../utils/security';
 
 export const YENIME_PLAYER_ORIGIN = 'https://player.yenime.net';
+const MAX_TELEMETRY_SECONDS = 86_400;
 
 interface ParsedStreamMeta {
   title: string | null;
@@ -40,9 +42,9 @@ function parseStreamingEpisodesMap(
 
     if (epNumber && Number.isInteger(epNumber) && epNumber > 0 && !map.has(epNumber)) {
       map.set(epNumber, {
-        title: cleanTitle,
-        thumbnail: entry.thumbnail ?? null,
-        site: entry.site ?? null,
+        title: cleanTitle ? sanitizePlainText(cleanTitle, 220) || null : null,
+        thumbnail: sanitizeHttpUrl(entry.thumbnail, { httpsOnly: true }),
+        site: entry.site ? sanitizePlainText(entry.site, 60) || null : null,
       });
     }
   });
@@ -247,8 +249,15 @@ export class YenimeProvider implements VideoProviderAdapter {
     };
   }
 
-  parsePlayerMessage(event: MessageEvent): PlayerTelemetryPayload | null {
+  parsePlayerMessage(
+    event: MessageEvent,
+    expectedSource?: MessageEventSource | null,
+  ): PlayerTelemetryPayload | null {
     if (event.origin !== YENIME_PLAYER_ORIGIN) {
+      return null;
+    }
+
+    if (expectedSource && event.source && event.source !== expectedSource) {
       return null;
     }
 
@@ -264,7 +273,11 @@ export class YenimeProvider implements VideoProviderAdapter {
       | null
       | undefined;
 
-    if (!payload || payload.type !== 'PLAYER_EVENT' || !payload.data) {
+    if (!payload || typeof payload !== 'object' || payload.type !== 'PLAYER_EVENT') {
+      return null;
+    }
+
+    if (!payload.data || typeof payload.data !== 'object') {
       return null;
     }
 
@@ -281,11 +294,11 @@ export class YenimeProvider implements VideoProviderAdapter {
 
     const currentTime =
       typeof payload.data.currentTime === 'number' && Number.isFinite(payload.data.currentTime)
-        ? Math.max(0, payload.data.currentTime)
+        ? Math.min(MAX_TELEMETRY_SECONDS, Math.max(0, payload.data.currentTime))
         : 0;
     const duration =
       typeof payload.data.duration === 'number' && Number.isFinite(payload.data.duration)
-        ? Math.max(0, payload.data.duration)
+        ? Math.min(MAX_TELEMETRY_SECONDS, Math.max(0, payload.data.duration))
         : 0;
 
     return {

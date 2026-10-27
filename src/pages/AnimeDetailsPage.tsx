@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Bookmark, Film, Play, Star } from 'lucide-react';
+import { Bookmark, ExternalLink, Film, Play, Star, Video, X } from 'lucide-react';
 import { AdSlot } from '../components/monetization/SponsorSlot';
 import { AnimeCard } from '../components/anime/AnimeCard';
 import { EpisodeList } from '../components/anime/EpisodeList';
@@ -21,6 +21,11 @@ import {
   getMainStudioName,
   getReleaseYear,
 } from '../utils/format';
+import {
+  buildSafeYoutubeEmbedUrl,
+  sanitizeHttpUrl,
+  sanitizePlainText,
+} from '../utils/security';
 
 export function AnimeDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -31,6 +36,7 @@ export function AnimeDetailsPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [bannerError, setBannerError] = useState(false);
   const [posterError, setPosterError] = useState(false);
+  const [trailerOpen, setTrailerOpen] = useState(false);
 
   const { isFavorite, toggleFavorite } = useFavorites();
   const { getEntryForAnime } = useWatchHistory();
@@ -47,6 +53,7 @@ export function AnimeDetailsPage() {
       setErrorMessage(null);
       setBannerError(false);
       setPosterError(false);
+      setTrailerOpen(false);
 
       try {
         const res = await getAnimeDetails(numericId, { bypassCache });
@@ -68,6 +75,17 @@ export function AnimeDetailsPage() {
     window.scrollTo(0, 0);
     void loadDetails(false);
   }, [loadDetails]);
+
+  useEffect(() => {
+    if (!trailerOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setTrailerOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [trailerOpen]);
 
   const provider = getVideoProvider();
   const episodeCatalogue = useMemo(
@@ -101,12 +119,36 @@ export function AnimeDetailsPage() {
       : null;
   const nativeTitle = anime?.title.native || null;
 
-  const hasBanner = Boolean(anime?.bannerImage) && !bannerError;
-  const posterUrl =
+  const safeBannerUrl = sanitizeHttpUrl(anime?.bannerImage, { httpsOnly: true });
+  const hasBanner = Boolean(safeBannerUrl) && !bannerError;
+  const posterUrl = sanitizeHttpUrl(
     anime?.coverImage?.extraLarge ||
-    anime?.coverImage?.large ||
-    anime?.coverImage?.medium ||
-    null;
+      anime?.coverImage?.large ||
+      anime?.coverImage?.medium ||
+      null,
+    { httpsOnly: true },
+  );
+  const trailerEmbedUrl = useMemo(
+    () => buildSafeYoutubeEmbedUrl(anime?.trailer),
+    [anime?.trailer],
+  );
+  const officialInfoLinks = useMemo(() => {
+    if (!anime) return [];
+    const seen = new Set<string>();
+    return anime.externalLinks
+      .filter((link) => !link.isDisabled && link.type !== 'STREAMING')
+      .map((link) => {
+        const cleanUrl = sanitizeHttpUrl(link.url, { httpsOnly: true });
+        const cleanSite = sanitizePlainText(link.site, 48);
+        return cleanUrl && cleanSite ? { id: link.id, url: cleanUrl, site: cleanSite } : null;
+      })
+      .filter((item): item is { id: number; url: string; site: string } => {
+        if (!item || seen.has(item.url)) return false;
+        seen.add(item.url);
+        return true;
+      })
+      .slice(0, 6);
+  }, [anime]);
 
   const synopsis = anime ? cleanSynopsis(anime.description) : '';
   const formatLabel = anime ? formatMediaFormat(anime.format) : null;
@@ -142,9 +184,9 @@ export function AnimeDetailsPage() {
         </div>
       ) : (
         <div className={`details-banner${hasBanner ? '' : ' details-banner--compact'}`}>
-          {hasBanner && anime.bannerImage && (
+          {hasBanner && safeBannerUrl && (
             <img
-              src={anime.bannerImage}
+              src={safeBannerUrl}
               alt=""
               className="details-banner__img"
               onError={() => setBannerError(true)}
@@ -269,6 +311,17 @@ export function AnimeDetailsPage() {
                   />
                   <span>{favorited ? 'In Favorites' : 'Add to Favorites'}</span>
                 </button>
+
+                {trailerEmbedUrl && (
+                  <button
+                    type="button"
+                    className="btn btn--ghost"
+                    onClick={() => setTrailerOpen(true)}
+                  >
+                    <Video size={16} aria-hidden="true" />
+                    <span>Trailer</span>
+                  </button>
+                )}
               </div>
             </div>
           </section>
@@ -475,6 +528,34 @@ export function AnimeDetailsPage() {
                     </div>
                   )}
                 </dl>
+
+                {officialInfoLinks.length > 0 && (
+                  <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)' }}>
+                    <div
+                      style={{
+                        fontSize: '0.72rem',
+                        color: 'var(--text-muted)',
+                        marginBottom: '8px',
+                      }}
+                    >
+                      Reference Links
+                    </div>
+                    <div className="external-links-list">
+                      {officialInfoLinks.map((link) => (
+                        <a
+                          key={link.id}
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="external-link-pill"
+                        >
+                          <span>{link.site}</span>
+                          <ExternalLink size={11} aria-hidden="true" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -482,6 +563,44 @@ export function AnimeDetailsPage() {
           </aside>
         </div>
       </div>
+
+      {trailerOpen && trailerEmbedUrl && anime && (
+        <div
+          className="trailer-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Official trailer for ${primaryTitle}`}
+          onClick={() => setTrailerOpen(false)}
+        >
+          <div
+            className="trailer-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="trailer-modal__header">
+              <span className="trailer-modal__title">{primaryTitle} — Official Trailer</span>
+              <button
+                type="button"
+                className="btn btn--ghost btn--compact"
+                aria-label="Close trailer modal"
+                onClick={() => setTrailerOpen(false)}
+              >
+                <X size={15} aria-hidden="true" />
+                <span>Close</span>
+              </button>
+            </div>
+            <div className="trailer-modal__frame">
+              <iframe
+                src={trailerEmbedUrl}
+                title={`${primaryTitle} — Official Trailer`}
+                className="player-frame__iframe"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                referrerPolicy="origin-when-cross-origin"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

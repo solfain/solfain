@@ -3,6 +3,7 @@ export type AdPlacement =
   | 'home-footer-rectangle'
   | 'search-top-banner'
   | 'search-bottom-rectangle'
+  | 'schedule-bottom-rectangle'
   | 'details-inline'
   | 'details-bottom-banner'
   | 'sidebar-rectangle'

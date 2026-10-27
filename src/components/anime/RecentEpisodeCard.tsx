@@ -9,6 +9,7 @@ import {
   formatRelativeAiredTime,
   getDisplayTitle,
 } from '../../utils/format';
+import { sanitizeHttpUrl } from '../../utils/security';
 
 interface RecentAiringCardProps {
   mode: 'airing';
@@ -28,11 +29,13 @@ export function RecentEpisodeCard(props: RecentEpisodeCardProps) {
   if (props.mode === 'airing') {
     const { item } = props;
     const title = getDisplayTitle(item.media.title);
-    const artwork =
+    const artwork = sanitizeHttpUrl(
       item.media.bannerImage ||
-      item.media.coverImage?.extraLarge ||
-      item.media.coverImage?.large ||
-      null;
+        item.media.coverImage?.extraLarge ||
+        item.media.coverImage?.large ||
+        null,
+      { httpsOnly: true },
+    );
     const formatLabel = formatMediaFormat(item.media.format);
     const relativeTime = formatRelativeAiredTime(item.airingAt);
 
@@ -82,7 +85,9 @@ export function RecentEpisodeCard(props: RecentEpisodeCardProps) {
   }
 
   const { item } = props;
-  const artwork = item.bannerImage || item.coverImage || null;
+  const artwork = sanitizeHttpUrl(item.bannerImage || item.coverImage || null, {
+    httpsOnly: true,
+  });
   const hasVerifiedProgress =
     typeof item.progressSeconds === 'number' &&
     item.progressSeconds > 0 &&

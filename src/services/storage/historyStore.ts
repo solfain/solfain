@@ -3,9 +3,11 @@ import type { AnimeSummary } from '../../types/anime';
 import type { AudioTrack } from '../../types/provider';
 import type { WatchHistoryItem } from '../../types/storage';
 import { getDisplayTitle } from '../../utils/format';
+import { safeJsonParse, sanitizeHttpUrl, sanitizePlainText } from '../../utils/security';
 
 export const WATCH_HISTORY_STORAGE_KEY = 'solfain:watch-history:v1';
-const MAX_HISTORY_ENTRIES = 60;
+const MAX_HISTORY_ENTRIES = 80;
+const MAX_VALID_MEDIA_SECONDS = 86_400; // 24h ceiling against malformed telemetry
 
 type Listener = () => void;
 const listeners = new Set<Listener>();
@@ -18,11 +20,18 @@ function isValidHistoryItem(value: unknown): value is WatchHistoryItem {
   if (typeof obj.animeId !== 'number' || !Number.isInteger(obj.animeId) || obj.animeId <= 0) {
     return false;
   }
-  if (typeof obj.title !== 'string' || obj.title.trim().length === 0) return false;
-  if (typeof obj.episode !== 'number' || !Number.isInteger(obj.episode) || obj.episode < 1) {
+  if (typeof obj.title !== 'string' || sanitizePlainText(obj.title).length === 0) return false;
+  if (
+    typeof obj.episode !== 'number' ||
+    !Number.isInteger(obj.episode) ||
+    obj.episode < 1 ||
+    obj.episode > 10_000
+  ) {
     return false;
   }
-  if (typeof obj.visitedAt !== 'number' || !Number.isFinite(obj.visitedAt)) return false;
+  if (typeof obj.visitedAt !== 'number' || !Number.isFinite(obj.visitedAt) || obj.visitedAt < 0) {
+    return false;
+  }
   return true;
 }
 
@@ -32,27 +41,41 @@ function sanitizeHistoryItem(raw: WatchHistoryItem): WatchHistoryItem {
     typeof raw.progressSeconds === 'number' &&
     Number.isFinite(raw.progressSeconds) &&
     raw.progressSeconds > 0
-      ? Math.floor(raw.progressSeconds)
+      ? Math.min(MAX_VALID_MEDIA_SECONDS, Math.floor(raw.progressSeconds))
       : null;
   const durationSeconds =
     typeof raw.durationSeconds === 'number' &&
     Number.isFinite(raw.durationSeconds) &&
     raw.durationSeconds > 0
-      ? Math.floor(raw.durationSeconds)
+      ? Math.min(MAX_VALID_MEDIA_SECONDS, Math.floor(raw.durationSeconds))
       : null;
 
   return {
     animeId: raw.animeId,
-    idMal: typeof raw.idMal === 'number' && Number.isInteger(raw.idMal) ? raw.idMal : null,
-    title: raw.title.trim(),
-    romajiTitle: typeof raw.romajiTitle === 'string' ? raw.romajiTitle : null,
-    coverImage: typeof raw.coverImage === 'string' ? raw.coverImage : null,
-    bannerImage: typeof raw.bannerImage === 'string' ? raw.bannerImage : null,
-    format: typeof raw.format === 'string' ? raw.format : null,
+    idMal:
+      typeof raw.idMal === 'number' && Number.isInteger(raw.idMal) && raw.idMal > 0
+        ? raw.idMal
+        : null,
+    title: sanitizePlainText(raw.title, 260) || 'Untitled Anime',
+    romajiTitle:
+      typeof raw.romajiTitle === 'string'
+        ? sanitizePlainText(raw.romajiTitle, 260) || null
+        : null,
+    coverImage: sanitizeHttpUrl(raw.coverImage, { httpsOnly: true }),
+    bannerImage: sanitizeHttpUrl(raw.bannerImage, { httpsOnly: true }),
+    format:
+      typeof raw.format === 'string' ? sanitizePlainText(raw.format, 40) || null : null,
     episode: raw.episode,
-    episodeTitle: typeof raw.episodeTitle === 'string' ? raw.episodeTitle : null,
+    episodeTitle:
+      typeof raw.episodeTitle === 'string'
+        ? sanitizePlainText(raw.episodeTitle, 240) || null
+        : null,
     totalEpisodes:
-      typeof raw.totalEpisodes === 'number' && raw.totalEpisodes > 0 ? raw.totalEpisodes : null,
+      typeof raw.totalEpisodes === 'number' &&
+      Number.isInteger(raw.totalEpisodes) &&
+      raw.totalEpisodes > 0
+        ? raw.totalEpisodes
+        : null,
     audio,
     visitedAt: raw.visitedAt,
     progressSeconds,
@@ -71,7 +94,7 @@ function readFromStorage(): WatchHistoryItem[] {
       cachedItems = [];
       return cachedItems;
     }
-    const parsed: unknown = JSON.parse(raw);
+    const parsed: unknown = safeJsonParse(raw);
     if (!Array.isArray(parsed)) {
       cachedItems = [];
       return cachedItems;
@@ -135,13 +158,13 @@ export function recordWatchVisit(input: RecordWatchVisitInput): void {
   const existing = current.find((item) => item.animeId === anime.id);
   const sameEpisode = existing?.episode === episode;
 
-  const updatedEntry: WatchHistoryItem = {
+  const updatedEntry: WatchHistoryItem = sanitizeHistoryItem({
     animeId: anime.id,
     idMal: anime.idMal ?? null,
     title: getDisplayTitle(anime.title),
     romajiTitle: anime.title?.romaji ?? null,
     coverImage:
-      anime.coverImage?.extraLarge || anime.coverImage?.large || anime.coverImage?.medium || null,
+      anime.coverImage?.large || anime.coverImage?.extraLarge || anime.coverImage?.medium || null,
     bannerImage: anime.bannerImage ?? null,
     format: anime.format ?? null,
     episode,
@@ -151,7 +174,7 @@ export function recordWatchVisit(input: RecordWatchVisitInput): void {
     visitedAt: Date.now(),
     progressSeconds: sameEpisode ? existing?.progressSeconds ?? null : null,
     durationSeconds: sameEpisode ? existing?.durationSeconds ?? null : null,
-  };
+  });
 
   const remaining = current.filter((item) => item.animeId !== anime.id);
   writeToStorage([updatedEntry, ...remaining]);
@@ -162,8 +185,9 @@ export function updateVerifiedPlaybackProgress(params: {
   episode: number;
   progressSeconds: number;
   durationSeconds: number;
+  force?: boolean;
 }): void {
-  const { animeId, episode, progressSeconds, durationSeconds } = params;
+  const { animeId, episode, progressSeconds, durationSeconds, force = false } = params;
   if (
     !Number.isFinite(progressSeconds) ||
     progressSeconds <= 0 ||
@@ -173,15 +197,24 @@ export function updateVerifiedPlaybackProgress(params: {
     return;
   }
 
+  const nextProgress = Math.min(MAX_VALID_MEDIA_SECONDS, Math.floor(progressSeconds));
+  const nextDuration = Math.min(MAX_VALID_MEDIA_SECONDS, Math.floor(durationSeconds));
+
   const current = readFromStorage();
   const idx = current.findIndex((item) => item.animeId === animeId && item.episode === episode);
   if (idx === -1) return;
 
+  const prevProgress = current[idx].progressSeconds;
+  // Throttle frequent `timeupdate` writes unless delta >= 5s or forced (pause/seeked/ended)
+  if (!force && prevProgress !== null && Math.abs(nextProgress - prevProgress) < 5) {
+    return;
+  }
+
   const next = [...current];
   next[idx] = {
     ...next[idx],
-    progressSeconds: Math.floor(progressSeconds),
-    durationSeconds: Math.floor(durationSeconds),
+    progressSeconds: nextProgress,
+    durationSeconds: nextDuration,
     visitedAt: Date.now(),
   };
   writeToStorage(next);
@@ -197,6 +230,36 @@ export function removeHistoryEntry(animeId: number): void {
 
 export function clearWatchHistory(): void {
   writeToStorage([]);
+}
+
+/**
+ * Safely merges imported watch history entries after schema and URL sanitization.
+ */
+export function importWatchHistoryList(entries: unknown[]): number {
+  if (!Array.isArray(entries)) return 0;
+  const current = readFromStorage();
+  const byAnimeId = new Map<number, WatchHistoryItem>();
+  for (const item of current) {
+    byAnimeId.set(item.animeId, item);
+  }
+
+  let importedCount = 0;
+  for (const rawEntry of entries) {
+    if (!isValidHistoryItem(rawEntry)) continue;
+    const clean = sanitizeHistoryItem(rawEntry);
+    const existing = byAnimeId.get(clean.animeId);
+    if (!existing || clean.visitedAt > existing.visitedAt) {
+      byAnimeId.set(clean.animeId, clean);
+      importedCount += 1;
+    }
+  }
+
+  if (importedCount > 0) {
+    const merged = Array.from(byAnimeId.values()).sort((a, b) => b.visitedAt - a.visitedAt);
+    writeToStorage(merged);
+  }
+
+  return importedCount;
 }
 
 function subscribe(listener: Listener): () => void {

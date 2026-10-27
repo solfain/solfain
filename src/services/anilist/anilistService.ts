@@ -1,4 +1,5 @@
 import type {
+  AiringScheduleEntry,
   AnimeDetails,
   AnimeSearchFilters,
   AnimeSummary,
@@ -15,6 +16,7 @@ import {
   HOME_CATALOGUE_QUERY,
   SEARCH_ANIME_QUERY,
   SEEDED_RECOMMENDATIONS_QUERY,
+  WEEKLY_SCHEDULE_QUERY,
 } from './queries';
 
 interface RawHomeCatalogueResponse {
@@ -226,3 +228,104 @@ export async function getSeededRecommendations(
     .map((n) => n.mediaRecommendation)
     .filter(isSafeAnime);
 }
+
+interface RawWeeklyScheduleResponse {
+  Page: {
+    pageInfo: {
+      currentPage: number;
+      hasNextPage: boolean;
+      perPage: number;
+    };
+    airingSchedules: Array<{
+      id: number;
+      episode: number;
+      airingAt: number;
+      timeUntilAiring: number;
+      media: AnimeSummary | null;
+    }>;
+  };
+}
+
+export async function getWeeklyAiringSchedule(options?: {
+  anchorDate?: Date;
+  signal?: AbortSignal;
+  bypassCache?: boolean;
+}): Promise<AiringScheduleEntry[]> {
+  const anchor = options?.anchorDate ?? new Date();
+  const startOfToday = new Date(
+    anchor.getFullYear(),
+    anchor.getMonth(),
+    anchor.getDate(),
+    0,
+    0,
+    0,
+    0,
+  );
+  const startAt = Math.floor(startOfToday.getTime() / 1000) - 1;
+  const endAt = startAt + 7 * 86_400 + 1;
+
+  const collected: AiringScheduleEntry[] = [];
+  const seenScheduleIds = new Set<number>();
+
+  for (let page = 1; page <= 3; page += 1) {
+    const data = await anilistRequest<RawWeeklyScheduleResponse>(
+      WEEKLY_SCHEDULE_QUERY,
+      { startAt, endAt, page, perPage: 50 },
+      {
+        ttlMs: 3 * 60 * 1000,
+        signal: options?.signal,
+        bypassCache: options?.bypassCache,
+      },
+    );
+
+    for (const item of data.Page?.airingSchedules ?? []) {
+      if (
+        !item?.media ||
+        !isSafeAnime(item.media) ||
+        (item.media.type && item.media.type !== 'ANIME') ||
+        seenScheduleIds.has(item.id)
+      ) {
+        continue;
+      }
+      seenScheduleIds.add(item.id);
+      collected.push({
+        id: item.id,
+        episode: item.episode,
+        airingAt: item.airingAt,
+        timeUntilAiring: item.timeUntilAiring,
+        media: item.media,
+      });
+    }
+
+    if (!data.Page?.pageInfo?.hasNextPage) {
+      break;
+    }
+  }
+
+  return collected.sort((a, b) => a.airingAt - b.airingAt);
+}
+
+export async function getSurpriseAnime(options?: {
+  signal?: AbortSignal;
+}): Promise<AnimeSummary> {
+  const randomPage = Math.floor(Math.random() * 8) + 1;
+  const result = await searchAnime(
+    {
+      sort: 'POPULARITY_DESC',
+      page: randomPage,
+      perPage: 24,
+    },
+    { bypassCache: true, signal: options?.signal },
+  );
+
+  const playable = result.media.filter((item) => item.status !== 'NOT_YET_RELEASED');
+  const candidates = playable.length > 0 ? playable : result.media;
+
+  if (candidates.length === 0) {
+    throw new AniListApiError('No anime entries returned by AniList right now.');
+  }
+
+  const randomIndex = Math.floor(Math.random() * candidates.length);
+  return candidates[randomIndex];
+}
+

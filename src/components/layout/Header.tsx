@@ -7,6 +7,7 @@ import { useWatchHistory } from '../../services/storage/historyStore';
 import type { AnimeSummary } from '../../types/anime';
 import { useDebouncedValue } from '../../utils/debounce';
 import { formatMediaFormat, getDisplayTitle, getReleaseYear } from '../../utils/format';
+import { sanitizeHttpUrl } from '../../utils/security';
 
 export function SolfainLogo() {
   return (
@@ -148,6 +149,14 @@ export function Header() {
               Browse
             </NavLink>
             <NavLink
+              to="/schedule"
+              className={({ isActive }) =>
+                `primary-nav__link${isActive ? ' primary-nav__link--active' : ''}`
+              }
+            >
+              Schedule
+            </NavLink>
+            <NavLink
               to="/favorites"
               className={({ isActive }) =>
                 `primary-nav__link${isActive ? ' primary-nav__link--active' : ''}`
@@ -200,7 +209,10 @@ export function Header() {
                       const title = getDisplayTitle(anime.title);
                       const year = getReleaseYear(anime);
                       const fmt = formatMediaFormat(anime.format);
-                      const img = anime.coverImage?.medium || anime.coverImage?.large || '';
+                      const img =
+                        sanitizeHttpUrl(anime.coverImage?.medium || anime.coverImage?.large, {
+                          httpsOnly: true,
+                        }) ?? '';
                       return (
                         <Link
                           key={anime.id}
@@ -292,6 +304,14 @@ export function Header() {
               }
             >
               <span>Browse</span>
+            </NavLink>
+            <NavLink
+              to="/schedule"
+              className={({ isActive }) =>
+                `mobile-drawer__link${isActive ? ' mobile-drawer__link--active' : ''}`
+              }
+            >
+              <span>Schedule</span>
             </NavLink>
             <NavLink
               to="/favorites"

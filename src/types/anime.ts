@@ -163,6 +163,14 @@ export interface RecentAiringItem {
   media: AnimeSummary;
 }
 
+export interface AiringScheduleEntry {
+  id: number;
+  episode: number;
+  airingAt: number;
+  timeUntilAiring: number;
+  media: AnimeSummary;
+}
+
 export interface PageInfo {
   currentPage: number;
   hasNextPage: boolean;

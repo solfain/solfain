@@ -10,6 +10,7 @@ import {
   getDisplayTitle,
   getReleaseYear,
 } from '../../utils/format';
+import { sanitizeHttpUrl } from '../../utils/security';
 
 export interface AnimeCardProps {
   anime: AnimeSummary | FavoriteAnimeItem;
@@ -30,9 +31,10 @@ export function AnimeCard({ anime, rank, eager = false }: AnimeCardProps) {
   const favorited = isFavorite(anime.id);
 
   const title = isFavoriteRecord(anime) ? anime.title : getDisplayTitle(anime.title);
-  const coverUrl = isFavoriteRecord(anime)
+  const rawCoverUrl = isFavoriteRecord(anime)
     ? anime.coverImage
     : anime.coverImage?.large || anime.coverImage?.extraLarge || anime.coverImage?.medium || null;
+  const coverUrl = sanitizeHttpUrl(rawCoverUrl, { httpsOnly: true });
   const formatLabel = formatMediaFormat(anime.format);
   const year = isFavoriteRecord(anime) ? anime.seasonYear : getReleaseYear(anime);
   const scoreLabel = formatScore(anime.averageScore);

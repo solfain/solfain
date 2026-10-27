@@ -19,6 +19,7 @@ const defaultPlacementsEnabled: Record<AdPlacement, boolean> = {
   'home-footer-rectangle': true,
   'search-top-banner': true,
   'search-bottom-rectangle': true,
+  'schedule-bottom-rectangle': true,
   'details-inline': true,
   'details-bottom-banner': true,
   'sidebar-rectangle': true,

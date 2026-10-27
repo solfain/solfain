@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -6,6 +6,8 @@ import {
   Bookmark,
   ChevronLeft,
   ChevronRight,
+  Maximize2,
+  Minimize2,
   RefreshCw,
 } from 'lucide-react';
 import { AdSlot } from '../components/monetization/SponsorSlot';
@@ -40,7 +42,9 @@ export function WatchPage() {
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [reloadNonce, setReloadNonce] = useState(0);
   const [autoNext, setAutoNext] = useState(true);
+  const [theaterMode, setTheaterMode] = useState(false);
   const [manualEpInput, setManualEpInput] = useState('');
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const { isFavorite, toggleFavorite } = useFavorites();
   const provider = getVideoProvider();
@@ -145,7 +149,10 @@ export function WatchPage() {
     if (!anime) return;
 
     const handleMessage = (event: MessageEvent) => {
-      const telemetry = provider.parsePlayerMessage(event);
+      const telemetry = provider.parsePlayerMessage(
+        event,
+        iframeRef.current?.contentWindow ?? null,
+      );
       if (!telemetry) return;
 
       setIframeLoaded(true);
@@ -156,6 +163,7 @@ export function WatchPage() {
           episode: currentEpisode,
           progressSeconds: telemetry.currentTime,
           durationSeconds: telemetry.duration,
+          force: telemetry.event !== 'timeupdate',
         });
       }
 
@@ -167,6 +175,42 @@ export function WatchPage() {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [anime, autoNext, currentAudio, currentEpisode, hasNext, provider, setNavigationState]);
+
+  const hasPrev = currentEpisode > 1;
+
+  // Accessible keyboard shortcuts on watch page: T = Theater, N = Next, P = Previous
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      if (key === 't') {
+        event.preventDefault();
+        setTheaterMode((prev) => !prev);
+      } else if (key === 'n' && hasNext) {
+        event.preventDefault();
+        setNavigationState(currentEpisode + 1, currentAudio);
+      } else if (key === 'p' && hasPrev) {
+        event.preventDefault();
+        setNavigationState(currentEpisode - 1, currentAudio);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [currentAudio, currentEpisode, hasNext, hasPrev, setNavigationState]);
 
   if (!loading && (errorMessage || !anime || !catalogue || !playbackSource)) {
     return (
@@ -189,7 +233,6 @@ export function WatchPage() {
 
   const title = anime ? getDisplayTitle(anime.title) : '';
   const favorited = anime ? isFavorite(anime.id) : false;
-  const hasPrev = currentEpisode > 1;
   const studioName = anime ? getMainStudioName(anime) : null;
   const synopsis = anime ? cleanSynopsis(anime.description) : '';
   const iframeSrc = playbackSource?.embedUrl ?? null;
@@ -217,7 +260,7 @@ export function WatchPage() {
         </div>
       )}
 
-      <div className="watch-layout">
+      <div className={`watch-layout${theaterMode ? ' watch-layout--theater' : ''}`}>
         <div className="watch-stage">
           {isInitialLoading ? (
             <>
@@ -243,6 +286,7 @@ export function WatchPage() {
                       </div>
                     )}
                     <iframe
+                      ref={iframeRef}
                       key={`${iframeSrc}::${reloadNonce}`}
                       src={iframeSrc}
                       title={`${title} — Episode ${currentEpisode} (${currentAudio.toUpperCase()})`}
@@ -386,6 +430,23 @@ export function WatchPage() {
                       </button>
                     </div>
                   )}
+
+                  <button
+                    type="button"
+                    className={`btn btn--ghost btn--compact${
+                      theaterMode ? ' btn--active-accent' : ''
+                    }`}
+                    aria-pressed={theaterMode}
+                    title="Toggle Theater Mode (T)"
+                    onClick={() => setTheaterMode((prev) => !prev)}
+                  >
+                    {theaterMode ? (
+                      <Minimize2 size={14} aria-hidden="true" />
+                    ) : (
+                      <Maximize2 size={14} aria-hidden="true" />
+                    )}
+                    <span>Theater</span>
+                  </button>
 
                   <button
                     type="button"

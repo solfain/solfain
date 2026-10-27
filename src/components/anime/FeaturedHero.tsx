@@ -10,6 +10,7 @@ import {
   getDisplayTitle,
   getReleaseYear,
 } from '../../utils/format';
+import { sanitizeHttpUrl } from '../../utils/security';
 
 export interface FeaturedHeroProps {
   items: AnimeSummary[];
@@ -44,10 +45,13 @@ export function FeaturedHero({ items }: FeaturedHeroProps) {
   const score = formatScore(active.averageScore);
   const favorited = isFavorite(active.id);
 
-  const hasBanner = Boolean(active.bannerImage) && !failedImages[active.id];
+  const safeBanner = sanitizeHttpUrl(active.bannerImage, { httpsOnly: true });
+  const hasBanner = Boolean(safeBanner) && !failedImages[active.id];
   const imageUrl = hasBanner
-    ? active.bannerImage
-    : active.coverImage?.extraLarge || active.coverImage?.large || null;
+    ? safeBanner
+    : sanitizeHttpUrl(active.coverImage?.extraLarge || active.coverImage?.large || null, {
+        httpsOnly: true,
+      });
 
   const canWatch = active.status !== 'NOT_YET_RELEASED';
 

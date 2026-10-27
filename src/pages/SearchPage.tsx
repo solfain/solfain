@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Search, Shuffle, SlidersHorizontal, X } from 'lucide-react';
 import { AdSlot } from '../components/monetization/SponsorSlot';
 import { AnimeCard } from '../components/anime/AnimeCard';
 import { AnimeGridSkeleton } from '../components/anime/Skeletons';
 import { EmptyState, ErrorState } from '../components/ui/StateFeedback';
-import { getAnimeGenres, searchAnime } from '../services/anilist/anilistService';
+import {
+  getAnimeGenres,
+  getSurpriseAnime,
+  searchAnime,
+} from '../services/anilist/anilistService';
 import type {
   AnimeSummary,
   MediaFormat,
@@ -63,7 +67,9 @@ const SORT_OPTIONS: Array<{ value: MediaSort; label: string }> = [
 ];
 
 export function SearchPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [surprising, setSurprising] = useState(false);
 
   const initialQuery = searchParams.get('q') ?? '';
   const genre = searchParams.get('genre') ?? '';
@@ -213,13 +219,50 @@ export function SearchPage() {
     inputValue.trim() || genre || format || season || parsedYear || sortParam,
   );
 
+  const handleSurpriseMe = async () => {
+    if (surprising) return;
+    setSurprising(true);
+    try {
+      const picked = await getSurpriseAnime();
+      navigate(`/anime/${picked.id}`);
+    } catch {
+      if (results.length > 0) {
+        const fallback = results[Math.floor(Math.random() * results.length)];
+        navigate(`/anime/${fallback.id}`);
+      }
+    } finally {
+      setSurprising(false);
+    }
+  };
+
   return (
     <div className="container">
-      <header className="page-header">
-        <h1 className="page-header__title">Browse & Search</h1>
-        <p className="page-header__desc">
-          Explore the AniList anime catalogue by title, genre, format, or season.
-        </p>
+      <header
+        className="page-header"
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '14px',
+        }}
+      >
+        <div>
+          <h1 className="page-header__title">Browse & Search</h1>
+          <p className="page-header__desc">
+            Explore the AniList anime catalogue by title, genre, format, or season.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn--secondary btn--compact"
+          disabled={surprising}
+          onClick={() => void handleSurpriseMe()}
+        >
+          <Shuffle size={14} aria-hidden="true" />
+          <span>{surprising ? 'Picking…' : 'Surprise Me'}</span>
+        </button>
       </header>
 
       <section className="filter-bar" aria-label="Catalogue filters">

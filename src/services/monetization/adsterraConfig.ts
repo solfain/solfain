@@ -5,6 +5,7 @@ import type {
   AdsterraSlotConfig,
   AdsterraUnitSpec,
 } from '../../types/monetization';
+import { sanitizeHttpUrl } from '../../utils/security';
 
 declare global {
   interface Window {
@@ -80,6 +81,12 @@ export const ADSTERRA_SLOTS: Record<AdPlacement, AdsterraSlotConfig> = {
   'search-bottom-rectangle': {
     placement: 'search-bottom-rectangle',
     label: 'Browse Footer Rectangle',
+    unit: ADSTERRA_UNIT_300X250,
+    dimensions: DIMS_300X250,
+  },
+  'schedule-bottom-rectangle': {
+    placement: 'schedule-bottom-rectangle',
+    label: 'Schedule Footer Rectangle',
     unit: ADSTERRA_UNIT_300X250,
     dimensions: DIMS_300X250,
   },
@@ -206,8 +213,10 @@ export function createAdsterraAdapter(
 
             const candidateUrls = [
               unit.invokeUrl,
-              ...(unit.fallbackInvokeUrls ?? []).filter((u) => Boolean(u.trim())),
-            ];
+              ...(unit.fallbackInvokeUrls ?? []),
+            ]
+              .map((u) => sanitizeHttpUrl(u, { httpsOnly: true }))
+              .filter((u): u is string => Boolean(u));
 
             const tryLoadAtIndex = (index: number) => {
               if (context.signal.aborted) {

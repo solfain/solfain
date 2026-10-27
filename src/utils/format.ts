@@ -26,21 +26,52 @@ const ENTITY_MAP: Record<string, string> = {
   '&gt;': '>',
   '&quot;': '"',
   '&#39;': "'",
+  '&#039;': "'",
   '&apos;': "'",
+  '&rsquo;': '’',
+  '&lsquo;': '‘',
+  '&ldquo;': '“',
+  '&rdquo;': '”',
+  '&hellip;': '…',
   '&nbsp;': ' ',
   '&mdash;': '—',
   '&ndash;': '–',
 };
 
+function decodeSafeCodePoint(codePoint: number): string {
+  if (
+    !Number.isInteger(codePoint) ||
+    codePoint < 0x20 ||
+    codePoint > 0x10ffff ||
+    (codePoint >= 0xd800 && codePoint <= 0xdfff) ||
+    codePoint === 0x7f
+  ) {
+    return '';
+  }
+  try {
+    return String.fromCodePoint(codePoint);
+  } catch {
+    return '';
+  }
+}
+
 export function cleanSynopsis(raw: string | null | undefined): string {
   if (!raw) return '';
   return raw
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n\n')
     .replace(/<[^>]+>/g, '')
-    .replace(/&(amp|lt|gt|quot|#39|apos|nbsp|mdash|ndash);/gi, (match) => {
-      return ENTITY_MAP[match.toLowerCase()] ?? match;
-    })
+    .replace(
+      /&(amp|lt|gt|quot|#0?39|apos|rsquo|lsquo|ldquo|rdquo|hellip|nbsp|mdash|ndash);/gi,
+      (match) => ENTITY_MAP[match.toLowerCase()] ?? match,
+    )
+    .replace(/&#(\d{1,7});/g, (_, dec: string) =>
+      decodeSafeCodePoint(Number.parseInt(dec, 10)),
+    )
+    .replace(/&#x([0-9a-fA-F]{1,6});/g, (_, hex: string) =>
+      decodeSafeCodePoint(Number.parseInt(hex, 16)),
+    )
     .replace(/\n{3,}/g, '\n\n')
     .replace(/[ \t]+\n/g, '\n')
     .trim();
@@ -130,6 +161,17 @@ export function formatRelativeAiredTime(airingAtSeconds: number, nowMs: number =
   if (days < 14) return `${days}d ago`;
   const date = new Date(airingAtSeconds * 1000);
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+export function formatTimeUntilAiring(airingAtSeconds: number, nowMs: number = Date.now()): string {
+  const remaining = airingAtSeconds - Math.floor(nowMs / 1000);
+  if (remaining <= 0) return 'Aired';
+  const days = Math.floor(remaining / 86400);
+  const hours = Math.floor((remaining % 86400) / 3600);
+  const minutes = Math.max(1, Math.floor((remaining % 3600) / 60));
+  if (days > 0) return `in ${days}d ${hours}h`;
+  if (hours > 0) return `in ${hours}h ${minutes}m`;
+  return `in ${minutes}m`;
 }
 
 export function formatClockDuration(totalSeconds: number | null | undefined): string | null {
