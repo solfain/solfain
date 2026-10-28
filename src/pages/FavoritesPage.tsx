@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Film, Minus, Play, Plus, Search, Trash2, X } from 'lucide-react';
+import { Archive, Film, Minus, Play, Plus, Search, Trash2, X } from 'lucide-react';
 import { AdSlot } from '../components/monetization/SponsorSlot';
 import { AnimeCard } from '../components/anime/AnimeCard';
 import { LibraryBackupControls } from '../components/storage/LibraryBackupControls';
@@ -120,7 +120,13 @@ export function FavoritesPage() {
           </p>
         </div>
 
-        <LibraryBackupControls hasEntries={hasAnyData} />
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
+          <Link to="/time-capsule" className="btn btn--secondary btn--compact">
+            <Archive size={14} aria-hidden="true" />
+            <span>Time Capsule</span>
+          </Link>
+          <LibraryBackupControls hasEntries={hasAnyData} />
+        </div>
       </header>
 
       <div className="library-toolbar">

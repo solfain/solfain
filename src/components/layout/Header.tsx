@@ -6,6 +6,10 @@ import { searchAnime } from '../../services/anilist/anilistService';
 import { useFavorites } from '../../services/storage/favoritesStore';
 import { useWatchHistory } from '../../services/storage/historyStore';
 import { useWatchlist } from '../../services/storage/watchlistStore';
+import {
+  getDueReminderCapsules,
+  useTimeCapsules,
+} from '../../services/timeCapsule/timeCapsuleStore';
 import type { AnimeSummary } from '../../types/anime';
 import { useDebouncedValue } from '../../utils/debounce';
 import { formatMediaFormat, getDisplayTitle, getReleaseYear } from '../../utils/format';
@@ -33,6 +37,11 @@ export function Header() {
   const { favorites } = useFavorites();
   const { watchlist } = useWatchlist();
   const { history } = useWatchHistory();
+  const { capsules } = useTimeCapsules();
+  const dueCapsuleCount = useMemo(
+    () => getDueReminderCapsules(capsules).length,
+    [capsules],
+  );
 
   const [quickQuery, setQuickQuery] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -189,6 +198,19 @@ export function Header() {
               }
             >
               Watch Party
+            </NavLink>
+            <NavLink
+              to="/time-capsule"
+              className={({ isActive }) =>
+                `primary-nav__link${isActive ? ' primary-nav__link--active' : ''}`
+              }
+            >
+              <span>Time Capsule</span>
+              {dueCapsuleCount > 0 && (
+                <span className="nav-count nav-count--due" title="Time Capsule ready to unseal">
+                  {dueCapsuleCount}
+                </span>
+              )}
             </NavLink>
             <NavLink
               to="/favorites"
@@ -373,6 +395,17 @@ export function Header() {
               }
             >
               <span>Watch Party</span>
+            </NavLink>
+            <NavLink
+              to="/time-capsule"
+              className={({ isActive }) =>
+                `mobile-drawer__link${isActive ? ' mobile-drawer__link--active' : ''}`
+              }
+            >
+              <span>Time Capsule</span>
+              {dueCapsuleCount > 0 && (
+                <span className="nav-count nav-count--due">{dueCapsuleCount}</span>
+              )}
             </NavLink>
             <NavLink
               to="/favorites"

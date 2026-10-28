@@ -58,6 +58,7 @@ src/
 │   ├── SchedulePage.tsx             # 7-day Simulcast Schedule grouped by local broadcast day with live countdowns
 │   ├── WatchPartyLobbyPage.tsx      # Create private/passcode-locked Watch Party rooms or join via 6-char invite code
 │   ├── WatchPartyRoomPage.tsx       # Real-time WebSocket synced playback (Yenime & direct HTTPS streams), live chat & host moderation
+│   ├── TimeCapsulePage.tsx          # Anime Time Capsule snapshots, 6m/1y revisit diff engine, .ics/browser reminders & shareable Before/After cards
 │   ├── StudioPage.tsx               # Animation Studio filmography spotlight (/studio/:id)
 │   ├── AnimeDetailsPage.tsx         # Artwork, titles, live airing countdown, synopsis, JP/EN voice cast, official trailer modal, episodes, relations, recommendations
 │   ├── WatchPage.tsx                # 16:9 player + Theater Mode, Cinema Lights-Off dimmer, persistent SUB/DUB prefs, watched checkmarks, shortcuts (T / L / N / P / ?)

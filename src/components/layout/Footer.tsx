@@ -24,6 +24,7 @@ export function Footer() {
           <Link to="/seasons">Seasons</Link>
           <Link to="/schedule">Schedule</Link>
           <Link to="/party">Watch Party</Link>
+          <Link to="/time-capsule">Time Capsule</Link>
           <Link to="/favorites">Watchlist</Link>
           <Link to="/history">Watch History</Link>
         </nav>

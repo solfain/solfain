@@ -72,6 +72,13 @@ export function LibraryBackupControls({ hasEntries = true }: LibraryBackupContro
           }`,
         );
       }
+      if (summary.importedTimeCapsules > 0) {
+        parts.push(
+          `${summary.importedTimeCapsules} time capsule${
+            summary.importedTimeCapsules === 1 ? '' : 's'
+          }`,
+        );
+      }
       setFeedback({
         tone: 'ok',
         text:

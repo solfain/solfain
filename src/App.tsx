@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { ErrorBoundary } from './components/layout/ErrorBoundary';
 import { Footer } from './components/layout/Footer';
 import { Header } from './components/layout/Header';
+import { TimeCapsuleReminderBanner } from './components/timeCapsule/TimeCapsuleReminderBanner';
 import { AnimeDetailsPage } from './pages/AnimeDetailsPage';
 import { FavoritesPage } from './pages/FavoritesPage';
 import { HistoryPage } from './pages/HistoryPage';
@@ -12,6 +13,7 @@ import { SchedulePage } from './pages/SchedulePage';
 import { SearchPage } from './pages/SearchPage';
 import { SeasonsPage } from './pages/SeasonsPage';
 import { StudioPage } from './pages/StudioPage';
+import { TimeCapsulePage } from './pages/TimeCapsulePage';
 import { WatchPage } from './pages/WatchPage';
 import { WatchPartyLobbyPage } from './pages/WatchPartyLobbyPage';
 import { WatchPartyRoomPage } from './pages/WatchPartyRoomPage';
@@ -33,6 +35,7 @@ export function AppRoutes() {
     <div className="app-shell">
       <ScrollToTop />
       <Header />
+      <TimeCapsuleReminderBanner />
       <main id="main-content" className="app-main" tabIndex={-1}>
         <ErrorBoundary resetKey={location.pathname}>
           <Routes>
@@ -42,6 +45,7 @@ export function AppRoutes() {
             <Route path="/schedule" element={<SchedulePage />} />
             <Route path="/party" element={<WatchPartyLobbyPage />} />
             <Route path="/party/:roomId" element={<WatchPartyRoomPage />} />
+            <Route path="/time-capsule" element={<TimeCapsulePage />} />
             <Route path="/studio/:id" element={<StudioPage />} />
             <Route path="/anime/:id" element={<AnimeDetailsPage />} />
             <Route path="/watch/:id" element={<WatchPage />} />

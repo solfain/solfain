@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  Archive,
   Bookmark,
   Calendar,
   Compass,
@@ -39,6 +40,7 @@ interface PaletteItem {
     | 'seasons'
     | 'schedule'
     | 'party'
+    | 'capsule'
     | 'favorites'
     | 'history'
     | 'surprise';
@@ -174,6 +176,16 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
         },
       },
       {
+        id: 'nav-capsule',
+        label: 'Anime Time Capsule',
+        sublabel: 'Snapshot today’s favorites, ratings & predictions to compare later',
+        icon: 'capsule',
+        action: () => {
+          onClose();
+          navigate('/time-capsule');
+        },
+      },
+      {
         id: 'nav-seasons',
         label: 'Seasonal Archive',
         sublabel: 'Explore Winter, Spring, Summer & Fall lineups by year',
@@ -302,6 +314,8 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
         return <Calendar size={14} aria-hidden="true" />;
       case 'party':
         return <Users size={14} aria-hidden="true" />;
+      case 'capsule':
+        return <Archive size={14} aria-hidden="true" />;
       case 'browse':
         return <Compass size={14} aria-hidden="true" />;
       case 'favorites':

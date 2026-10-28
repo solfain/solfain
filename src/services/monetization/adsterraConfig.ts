@@ -114,6 +114,12 @@ export const ADSTERRA_SLOTS: Record<AdPlacement, AdsterraSlotConfig> = {
     unit: ADSTERRA_UNIT_300X250,
     dimensions: DIMS_300X250,
   },
+  'capsule-bottom-rectangle': {
+    placement: 'capsule-bottom-rectangle',
+    label: 'Time Capsule Footer Rectangle',
+    unit: ADSTERRA_UNIT_300X250,
+    dimensions: DIMS_300X250,
+  },
   'details-inline': {
     placement: 'details-inline',
     label: 'Details Inline Banner',

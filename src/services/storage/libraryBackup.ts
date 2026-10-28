@@ -4,7 +4,12 @@ import type {
   WatchHistoryItem,
   WatchlistEntry,
 } from '../../types/storage';
+import type { TimeCapsuleSnapshot } from '../../types/timeCapsule';
 import { safeJsonParse } from '../../utils/security';
+import {
+  getTimeCapsules,
+  importTimeCapsules,
+} from '../timeCapsule/timeCapsuleStore';
 import { getFavorites, importFavoritesList } from './favoritesStore';
 import { getWatchHistory, importWatchHistoryList } from './historyStore';
 import { getUserPreferences, updateUserPreferences } from './preferencesStore';
@@ -23,6 +28,7 @@ export interface SolfainLibraryBackup {
   watchlist: WatchlistEntry[];
   history: WatchHistoryItem[];
   watchedEpisodes: WatchedEpisodesMap;
+  timeCapsules?: TimeCapsuleSnapshot[];
   preferences: UserPreferences;
 }
 
@@ -31,6 +37,7 @@ export interface LibraryImportSummary {
   importedWatchlist: number;
   importedHistory: number;
   importedWatchedSeries: number;
+  importedTimeCapsules: number;
 }
 
 const MAX_BACKUP_FILE_BYTES = 1_048_576; // 1 MB hard ceiling
@@ -44,6 +51,7 @@ export function createLibraryBackupPayload(): string {
     watchlist: getWatchlist(),
     history: getWatchHistory(),
     watchedEpisodes: getWatchedEpisodesMap(),
+    timeCapsules: getTimeCapsules(),
     preferences: getUserPreferences(),
   };
   return JSON.stringify(payload, null, 2);
@@ -75,13 +83,20 @@ export function importLibraryBackupJson(rawJson: string): LibraryImportSummary {
   const hasFavoritesArray = Array.isArray(record.favorites);
   const hasWatchlistArray = Array.isArray(record.watchlist);
   const hasHistoryArray = Array.isArray(record.history);
+  const hasCapsulesArray = Array.isArray(record.timeCapsules);
   const hasWatchedMap = Boolean(
     record.watchedEpisodes &&
       typeof record.watchedEpisodes === 'object' &&
       !Array.isArray(record.watchedEpisodes),
   );
 
-  if (!hasFavoritesArray && !hasWatchlistArray && !hasHistoryArray && !hasWatchedMap) {
+  if (
+    !hasFavoritesArray &&
+    !hasWatchlistArray &&
+    !hasHistoryArray &&
+    !hasWatchedMap &&
+    !hasCapsulesArray
+  ) {
     throw new Error('Backup file does not contain any valid Solfain library collections.');
   }
 
@@ -97,6 +112,9 @@ export function importLibraryBackupJson(rawJson: string): LibraryImportSummary {
   const importedWatchedSeries = hasWatchedMap
     ? importWatchedEpisodesMap(record.watchedEpisodes)
     : 0;
+  const importedTimeCapsules = hasCapsulesArray
+    ? importTimeCapsules(record.timeCapsules as unknown[])
+    : 0;
 
   if (record.preferences && typeof record.preferences === 'object') {
     updateUserPreferences(record.preferences as Partial<UserPreferences>);
@@ -107,5 +125,6 @@ export function importLibraryBackupJson(rawJson: string): LibraryImportSummary {
     importedWatchlist,
     importedHistory,
     importedWatchedSeries,
+    importedTimeCapsules,
   };
 }

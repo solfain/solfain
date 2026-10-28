@@ -24,6 +24,7 @@ const defaultPlacementsEnabled: Record<AdPlacement, boolean> = {
   'schedule-bottom-rectangle': true,
   'studio-bottom-rectangle': true,
   'party-bottom-rectangle': true,
+  'capsule-bottom-rectangle': true,
   'details-inline': true,
   'details-bottom-banner': true,
   'sidebar-rectangle': true,
