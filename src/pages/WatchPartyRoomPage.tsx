@@ -13,6 +13,8 @@ import {
   ChevronRight,
   Copy,
   Crown,
+  ExternalLink,
+  Link2,
   Lock,
   LogOut,
   Maximize2,
@@ -24,10 +26,12 @@ import {
   Search,
   Send,
   Settings,
+  Share2,
   UserMinus,
   Users,
   X,
 } from 'lucide-react';
+import { copyTextToClipboard } from '../utils/clipboard';
 import { searchAnime } from '../services/anilist/anilistService';
 import { getVideoProvider } from '../services/providers';
 import {
@@ -94,7 +98,8 @@ export function WatchPartyRoomPage() {
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('chat');
   const [unreadChat, setUnreadChat] = useState<number>(0);
   const [chatInput, setChatInput] = useState('');
-  const [copiedInvite, setCopiedInvite] = useState(false);
+  const [invitePanelOpen, setInvitePanelOpen] = useState(false);
+  const [copiedInvite, setCopiedInvite] = useState<'link' | 'code' | null>(null);
   const [theaterMode, setTheaterMode] = useState(false);
   const [localPositionSec, setLocalPositionSec] = useState<number | null>(null);
   const [reloadNonce, setReloadNonce] = useState(0);
@@ -511,15 +516,57 @@ export function WatchPartyRoomPage() {
     sendSocketMessage({ type: 'change_media', media: nextMedia });
   };
 
-  const handleCopyInvite = () => {
-    const inviteUrl = `${window.location.origin}/party/${roomCode}`;
-    void navigator.clipboard
-      ?.writeText(inviteUrl)
-      .then(() => {
-        setCopiedInvite(true);
-        window.setTimeout(() => setCopiedInvite(false), 2000);
-      })
-      .catch(() => {});
+  const inviteUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/party/${roomCode}`
+      : `/party/${roomCode}`;
+
+  const canNativeShare =
+    typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+
+  const triggerCopyFeedback = (mode: 'link' | 'code') => {
+    setCopiedInvite(mode);
+    window.setTimeout(() => {
+      setCopiedInvite((prev) => (prev === mode ? null : prev));
+    }, 2200);
+  };
+
+  const handleCopyInviteLink = async () => {
+    const ok = await copyTextToClipboard(inviteUrl);
+    if (ok) {
+      triggerCopyFeedback('link');
+    }
+  };
+
+  const handleCopyRoomCode = async () => {
+    const ok = await copyTextToClipboard(roomCode);
+    if (ok) {
+      triggerCopyFeedback('code');
+    }
+  };
+
+  const handleToggleInviteButton = async () => {
+    const nextOpen = !invitePanelOpen;
+    setInvitePanelOpen(nextOpen);
+    if (nextOpen) {
+      const ok = await copyTextToClipboard(inviteUrl);
+      if (ok) {
+        triggerCopyFeedback('link');
+      }
+    }
+  };
+
+  const handleNativeShare = async () => {
+    if (!canNativeShare) return;
+    try {
+      await navigator.share({
+        title: room ? `${room.roomTitle} — Solfain Watch Party` : `Solfain Watch Party #${roomCode}`,
+        text: `Join my Watch Party (#${roomCode}) on Solfain!`,
+        url: inviteUrl,
+      });
+    } catch {
+      // User cancelled native share sheet
+    }
   };
 
   // Pre-Join Gate for guests opening an invite link
@@ -633,14 +680,15 @@ export function WatchPartyRoomPage() {
   const yenimeMedia =
     room && room.media.sourceType === 'yenime' ? room.media : null;
 
-  const yenimeEmbedUrl = useMemo(() => {
-    if (!yenimeMedia) return null;
-    const base =
-      yenimeMedia.idMode === 'mal' && yenimeMedia.idMal
-        ? `https://player.yenime.net/anime/mal/${yenimeMedia.idMal}/${yenimeMedia.episode}`
-        : `https://player.yenime.net/anime/ani/${yenimeMedia.animeId}/${yenimeMedia.episode}`;
-    return yenimeMedia.audio === 'dub' ? `${base}?dub=1` : base;
-  }, [yenimeMedia]);
+  const yenimeEmbedUrl = yenimeMedia
+    ? (() => {
+        const base =
+          yenimeMedia.idMode === 'mal' && yenimeMedia.idMal
+            ? `https://player.yenime.net/anime/mal/${yenimeMedia.idMal}/${yenimeMedia.episode}`
+            : `https://player.yenime.net/anime/ani/${yenimeMedia.animeId}/${yenimeMedia.episode}`;
+        return yenimeMedia.audio === 'dub' ? `${base}?dub=1` : base;
+      })()
+    : null;
 
   const safeDirectVideoUrl =
     room && room.media.sourceType === 'direct'
@@ -661,7 +709,14 @@ export function WatchPartyRoomPage() {
           <h1 className="party-room-topbar__title">
             {room ? room.roomTitle : `Connecting to #${roomCode}…`}
           </h1>
-          <span className="party-code-chip tabular">#{roomCode}</span>
+          <button
+            type="button"
+            className="party-code-chip party-code-chip--interactive tabular"
+            title="Copy room code or open invite options"
+            onClick={() => void handleToggleInviteButton()}
+          >
+            #{roomCode}
+          </button>
           {room && (
             <span className="party-viewer-pill tabular">
               <Users size={12} aria-hidden="true" />
@@ -673,15 +728,21 @@ export function WatchPartyRoomPage() {
         <div className="party-room-topbar__actions">
           <button
             type="button"
-            className="btn btn--secondary btn--compact"
-            onClick={handleCopyInvite}
+            className={`btn btn--compact ${
+              invitePanelOpen ? 'btn--primary' : 'btn--secondary'
+            }`}
+            aria-expanded={invitePanelOpen}
+            aria-controls="party-invite-panel"
+            onClick={() => void handleToggleInviteButton()}
           >
-            {copiedInvite ? (
+            {copiedInvite === 'link' ? (
               <Check size={14} aria-hidden="true" />
             ) : (
               <Copy size={14} aria-hidden="true" />
             )}
-            <span>{copiedInvite ? 'Invite Copied' : 'Invite Friends'}</span>
+            <span>
+              {copiedInvite === 'link' ? 'Invite Copied!' : 'Invite Friends'}
+            </span>
           </button>
 
           <button
@@ -711,6 +772,108 @@ export function WatchPartyRoomPage() {
           </button>
         </div>
       </div>
+
+      {/* Interactive Invite Friends Panel */}
+      {invitePanelOpen && (
+        <section
+          id="party-invite-panel"
+          className="party-invite-panel"
+          aria-label="Invite friends to this Watch Party"
+        >
+          <div className="party-invite-panel__head">
+            <div>
+              <div className="party-invite-panel__title">
+                <Link2 size={15} aria-hidden="true" />
+                <span>Invite Friends to #{roomCode}</span>
+              </div>
+              <p className="party-invite-panel__sub">
+                {room?.hasPasscode
+                  ? 'Passcode lock is active — share this link or room code along with your passcode.'
+                  : 'Share the direct link below, or give friends the 6-character code to enter on the Watch Party page.'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="party-invite-panel__close"
+              aria-label="Close invite panel"
+              onClick={() => setInvitePanelOpen(false)}
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
+
+          <div className="party-invite-panel__grid">
+            <div className="party-invite-field">
+              <label htmlFor="party-invite-url-input" className="party-invite-field__label">
+                Direct Invite Link
+              </label>
+              <div className="party-invite-field__row">
+                <input
+                  id="party-invite-url-input"
+                  type="text"
+                  readOnly
+                  className="field-input party-invite-field__input"
+                  value={inviteUrl}
+                  onFocus={(e) => e.currentTarget.select()}
+                  onClick={(e) => e.currentTarget.select()}
+                />
+                <button
+                  type="button"
+                  className="btn btn--primary btn--compact"
+                  onClick={() => void handleCopyInviteLink()}
+                >
+                  {copiedInvite === 'link' ? (
+                    <Check size={14} aria-hidden="true" />
+                  ) : (
+                    <Copy size={14} aria-hidden="true" />
+                  )}
+                  <span>{copiedInvite === 'link' ? 'Copied!' : 'Copy Link'}</span>
+                </button>
+                <a
+                  href={inviteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn--secondary btn--compact"
+                  title="Open invite link in a new browser tab"
+                >
+                  <ExternalLink size={14} aria-hidden="true" />
+                  <span>Open Tab</span>
+                </a>
+              </div>
+            </div>
+
+            <div className="party-invite-field party-invite-field--code">
+              <span className="party-invite-field__label">6-Char Room Code</span>
+              <div className="party-invite-field__row">
+                <code className="party-invite-code-box tabular">{roomCode}</code>
+                <button
+                  type="button"
+                  className="btn btn--secondary btn--compact"
+                  onClick={() => void handleCopyRoomCode()}
+                >
+                  {copiedInvite === 'code' ? (
+                    <Check size={14} aria-hidden="true" />
+                  ) : (
+                    <Copy size={14} aria-hidden="true" />
+                  )}
+                  <span>{copiedInvite === 'code' ? 'Copied!' : 'Copy Code'}</span>
+                </button>
+                {canNativeShare && (
+                  <button
+                    type="button"
+                    className="btn btn--ghost btn--compact"
+                    onClick={() => void handleNativeShare()}
+                  >
+                    <Share2 size={14} aria-hidden="true" />
+                    <span>Share…</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {roomError && (
         <div

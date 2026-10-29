@@ -35,6 +35,7 @@ import {
   getMainStudioInfo,
   getReleaseYear,
 } from '../utils/format';
+import { copyTextToClipboard } from '../utils/clipboard';
 import {
   buildSafeYoutubeEmbedUrl,
   sanitizeHttpUrl,
@@ -362,13 +363,12 @@ export function AnimeDetailsPage() {
                   type="button"
                   className="btn btn--ghost"
                   onClick={() => {
-                    void navigator.clipboard
-                      ?.writeText(window.location.href)
-                      .then(() => {
+                    void copyTextToClipboard(window.location.href).then((ok) => {
+                      if (ok) {
                         setLinkCopied(true);
                         window.setTimeout(() => setLinkCopied(false), 2000);
-                      })
-                      .catch(() => {});
+                      }
+                    });
                   }}
                 >
                   {linkCopied ? (

@@ -34,6 +34,7 @@ import { markEpisodeWatched } from '../services/storage/watchedEpisodesStore';
 import { syncWatchlistOnEpisodeVisit } from '../services/storage/watchlistStore';
 import type { AnimeDetails } from '../types/anime';
 import type { AudioTrack, ProviderIdMode } from '../types/provider';
+import { copyTextToClipboard } from '../utils/clipboard';
 import {
   cleanSynopsis,
   formatMediaFormat,
@@ -629,13 +630,12 @@ export function WatchPage() {
                       type="button"
                       className="btn btn--ghost btn--compact"
                       onClick={() => {
-                        void navigator.clipboard
-                          ?.writeText(window.location.href)
-                          .then(() => {
+                        void copyTextToClipboard(window.location.href).then((ok) => {
+                          if (ok) {
                             setCopiedLink(true);
                             window.setTimeout(() => setCopiedLink(false), 2000);
-                          })
-                          .catch(() => {});
+                          }
+                        });
                       }}
                     >
                       {copiedLink ? (

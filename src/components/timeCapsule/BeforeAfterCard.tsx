@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Check, Copy, Download, Link2 } from 'lucide-react';
 import type { ShareableBeforeAfterPayload } from '../../types/timeCapsule';
+import { copyTextToClipboard } from '../../utils/clipboard';
 import {
   downloadBeforeAfterCardPng,
   encodeShareableCardPayload,
@@ -30,23 +31,19 @@ export function BeforeAfterCard({
   })();
 
   const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
+    const ok = await copyTextToClipboard(shareUrl);
+    if (ok) {
       setCopiedMode('link');
       window.setTimeout(() => setCopiedMode(null), 2200);
-    } catch {
-      // Clipboard unavailable in restricted contexts
     }
   };
 
   const handleCopyText = async () => {
-    try {
-      const text = formatBeforeAfterSummaryText(payload, shareUrl);
-      await navigator.clipboard.writeText(text);
+    const text = formatBeforeAfterSummaryText(payload, shareUrl);
+    const ok = await copyTextToClipboard(text);
+    if (ok) {
       setCopiedMode('text');
       window.setTimeout(() => setCopiedMode(null), 2200);
-    } catch {
-      // Clipboard unavailable
     }
   };
 

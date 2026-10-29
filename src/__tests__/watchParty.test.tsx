@@ -1,11 +1,12 @@
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import WebSocket from 'ws';
 import { createWatchPartyHub } from '../../server/watchPartyHub.mjs';
 import { WatchPartyLobbyPage } from '../pages/WatchPartyLobbyPage';
+import { WatchPartyRoomPage } from '../pages/WatchPartyRoomPage';
 import { clearAniListCache } from '../services/anilist/client';
 import {
   getInterpolatedPartyPosition,
@@ -357,5 +358,89 @@ describe('Watch Party Real-Time Hub & Client Integration', () => {
       expect(screen.getByText('Horimiya')).toBeInTheDocument();
     });
     expect(screen.getByLabelText(/Starting Episode/i)).toHaveValue(3);
+  });
+
+  it('opens the Invite Friends panel, copies via fallback when navigator.clipboard is blocked in an iframe, and joins cleanly from an invite URL', async () => {
+    // Stub WebSocket in jsdom so WatchPartyRoomPage doesn't open lingering connections
+    class StubBrowserWebSocket {
+      static OPEN = 1;
+      readyState = 1;
+      addEventListener() {}
+      removeEventListener() {}
+      send() {}
+      close() {}
+    }
+    vi.stubGlobal('WebSocket', StubBrowserWebSocket);
+
+    // Simulate cross-origin iframe blocking Async Clipboard API while allowing execCommand('copy')
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: vi.fn().mockRejectedValue(new Error('NotAllowedError: Blocked by iframe policy')),
+      },
+    });
+    const execCopySpy = vi.fn().mockReturnValue(true);
+    Object.defineProperty(document, 'execCommand', {
+      configurable: true,
+      value: execCopySpy,
+    });
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          exists: true,
+          roomId: '7K4M9P',
+          roomTitle: 'Friday Night Anime',
+          hasPasscode: false,
+          participantCount: 1,
+          mediaTitle: 'Horimiya · Episode 1',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    // 1. Render as an invited friend arriving via /party/7K4M9P (joinedOnce === false)
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/party/7K4M9P']}>
+        <Routes>
+          <Route path="/party/:roomId" element={<WatchPartyRoomPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Friday Night Anime')).toBeInTheDocument();
+    });
+
+    // Submit Pre-Join form -> transitions joinedOnce false -> true without hook-order errors
+    fireEvent.change(screen.getByLabelText(/Your Display Name/i), {
+      target: { value: 'Ren' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Join Watch Party/i }));
+
+    // 2. Click "Invite Friends" button in the room top bar
+    const inviteBtn = await screen.findByRole('button', { name: /Invite Friends/i });
+    fireEvent.click(inviteBtn);
+
+    await waitFor(() => {
+      expect(
+        screen.getByLabelText(/Invite friends to this Watch Party/i),
+      ).toBeInTheDocument();
+    });
+
+    expect(execCopySpy).toHaveBeenCalledWith('copy');
+    expect(screen.getByLabelText(/Direct Invite Link/i)).toHaveValue(
+      `${window.location.origin}/party/7K4M9P`,
+    );
+    expect(screen.getByRole('button', { name: /Invite Copied!/i })).toBeInTheDocument();
+
+    // Copy 6-Char Room Code button works as well
+    fireEvent.click(screen.getByRole('button', { name: /Copy Code/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Copied!/i })).toBeInTheDocument();
+    });
+
+    unmount();
+    vi.unstubAllGlobals();
   });
 });
